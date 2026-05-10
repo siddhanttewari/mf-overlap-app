@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>MF Overlap Analyzer — Compare Indian Mutual Fund Portfolios</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  .scheme-chip { transition: all 0.15s ease; }
+  .scheme-chip:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+  .heatmap-cell { transition: all 0.15s ease; cursor: pointer; }
+  .heatmap-cell:hover { transform: scale(1.05); z-index: 10; box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+  .dropdown-item:hover { background: #eff6ff; }
+  .pulse-dot { animation: pulse 2s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
+  .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; }
+  .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+  .spinner { border: 3px solid #e0e7ff; border-top: 3px solid #6366f1; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; }
+  .spinner-sm { border-width: 2px; width: 14px; height: 14px; display: inline-block; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body class="bg-slate-50 min-h-screen">
+
+<header class="bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-lg">
+  <div class="max-w-7xl mx-auto px-6 py-8">
+    <div class="flex items-center justify-between flex-wrap gap-4">
+      <div>
+        <h1 class="text-3xl font-bold">MF Overlap Analyzer</h1>
+        <p class="text-indigo-100 mt-1">Compare your mutual fund portfolios. Spot duplicates. Find what's unique.</p>
+      </div>
+      <div class="flex items-center gap-2 text-sm bg-white/10 rounded-lg px-3 py-2">
+        <span class="pulse-dot w-2 h-2 bg-green-400 rounded-full"></span>
+        <span id="dataStatus">Loading…</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <section id="errorState" class="hidden bg-red-50 border border-red-200 rounded-xl p-6 mb-6">
+    <h3 class="font-semibold text-red-800 mb-2">⚠ Data source error</h3>
+    <p id="errorDetails" class="text-sm text-red-700 mb-2"></p>
+    <button onclick="initApp()" class="mt-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm hover:bg-red-700">Retry</button>
+  </section>
+
+  <section class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-6">
+    <div class="flex items-start justify-between flex-wrap gap-4 mb-4">
+      <div>
+        <h2 class="text-xl font-semibold text-slate-800">Select your mutual fund schemes</h2>
+        <p class="text-slate-500 text-sm mt-1">Pick 2 to 10 schemes you own. We'll fetch their latest holdings and compute pairwise overlap.</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="clearBtn" class="px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-100 rounded-lg border border-slate-200">Clear</button>
+        <button id="sampleBtn" class="px-3 py-1.5 text-sm text-indigo-600 hover:bg-indigo-50 rounded-lg border border-indigo-200">Try sample portfolio</button>
+      </div>
+    </div>
+
+    <div class="relative">
+      <div class="relative">
+        <input id="schemeSearch" type="text"
+          class="w-full px-4 py-3 pr-10 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+          placeholder="Type at least 2 letters to search any of 14,500+ schemes..." autocomplete="off" />
+        <span id="searchSpinner" class="hidden absolute right-3 top-1/2 -translate-y-1/2"><span class="spinner spinner-sm"></span></span>
+      </div>
+      <div id="dropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-lg shadow-lg max-h-80 overflow-y-auto scrollbar-thin"></div>
+    </div>
+
+    <div id="selectedSchemes" class="mt-4 flex flex-wrap gap-2"></div>
+
+    <div class="mt-5 flex items-center justify-between">
+      <span id="selectionCount" class="text-sm text-slate-500">No schemes selected</span>
+      <button id="analyzeBtn"
+        class="px-5 py-2.5 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 disabled:bg-slate-300 disabled:cursor-not-allowed transition"
+        disabled>Analyze Overlap →</button>
+    </div>
+  </section>
+
+  <section id="emptyState" class="bg-white rounded-xl border border-dashed border-slate-300 p-12 text-center">
+    <svg class="w-16 h-16 mx-auto text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+    </svg>
+    <h3 class="text-lg font-medium text-slate-700">Select at least 2 schemes to begin</h3>
+    <p class="text-slate-500 text-sm mt-1">Or click "Try sample portfolio" for a quick demo.</p>
+  </section>
+
+  <section id="results" class="hidden space-y-6">
+    <div class="bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-6">
+      <div class="flex items-start gap-3">
+        <div class="bg-amber-100 rounded-lg p-2">
+          <svg class="w-6 h-6 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+          </svg>
+        </div>
+        <div class="flex-1">
+          <h3 class="font-semibold text-slate-800 mb-2">Key insights for your portfolio</h3>
+          <div id="insightsContent" class="space-y-2 text-sm text-slate-700"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="text-lg font-semibold text-slate-800">Pairwise overlap matrix</h3>
+          <p class="text-sm text-slate-500">% of portfolio by weight that's common between any two schemes</p>
+        </div>
+        <div class="flex items-center gap-3 text-xs">
+          <span class="text-slate-500">Low</span>
+          <div class="w-32 h-3 rounded" style="background: linear-gradient(to right, #dbeafe, #6366f1, #312e81);"></div>
+          <span class="text-slate-500">High</span>
+        </div>
+      </div>
+      <div id="matrixContainer" class="overflow-x-auto"></div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h3 class="text-lg font-semibold text-slate-800 mb-4">Per-scheme uniqueness</h3>
+      <p class="text-sm text-slate-500 mb-4">How much of each scheme is unique vs. duplicated by other selected schemes.</p>
+      <div id="uniquenessContent" class="space-y-3"></div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
+      <h3 class="text-lg font-semibold text-slate-800 mb-1">Commonly held stocks across your portfolio</h3>
+      <p class="text-sm text-slate-500 mb-4">These stocks appear in multiple selected schemes — concentrated bets.</p>
+      <div id="commonHoldingsContent"></div>
+    </div>
+  </section>
+
+  <footer class="mt-10 pt-6 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
+    <p class="font-semibold text-slate-600 mb-1">Important notes:</p>
+    <ul class="list-disc list-inside space-y-1">
+      <li>Holdings data sourced from <strong>MFData.in</strong>, an open-source aggregator of SEBI-mandated AMC monthly disclosures.</li>
+      <li>Search supports all <span id="totalSchemesFooter">14,500+</span> schemes across <span id="totalAmcsFooter">50+</span> AMCs (equity, hybrid, debt, etc.). Holdings shown for funds that publish equity portfolios.</li>
+      <li>Overlap formula: <code class="bg-slate-100 px-1 rounded">Σ min(weight_A, weight_B)</code> over common stocks, with weights normalized to 100%.</li>
+      <li>Only equity holdings are considered for overlap math. Cash, debt, and derivatives are excluded. Not investment advice.</li>
+    </ul>
+  </footer>
+
+</main>
+
+<script>
+// =====================================================================
+// State
+// =====================================================================
+const SCHEMES = {};                // family_id (string) -> {family_id, name, amc, category}  (built up as user selects)
+const HOLDINGS = {};               // family_id -> {stockName: weight_pct}
+const HOLDINGS_META = {};          // family_id -> {month, equity_pct, total_aum}
+const holdingsInflight = {};       // family_id -> Promise<>
+const selected = new Set();        // family_id strings
+const MAX_SCHEMES = 10;
+let searchAbortController = null;
+let lastSearchResults = [];
+
+// =====================================================================
+// DOM
+// =====================================================================
+const errorState = document.getElementById('errorState');
+const errorDetails = document.getElementById('errorDetails');
+const dataStatus = document.getElementById('dataStatus');
+const searchInput = document.getElementById('schemeSearch');
+const searchSpinner = document.getElementById('searchSpinner');
+const dropdown = document.getElementById('dropdown');
+const selectedSchemesEl = document.getElementById('selectedSchemes');
+const selectionCountEl = document.getElementById('selectionCount');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const clearBtn = document.getElementById('clearBtn');
+const sampleBtn = document.getElementById('sampleBtn');
+const emptyState = document.getElementById('emptyState');
+const resultsEl = document.getElementById('results');
+
+// =====================================================================
+// Init: fetch stats only (fast)
+// =====================================================================
+async function initApp() {
+  errorState.classList.add('hidden');
+  dataStatus.textContent = 'Loading…';
+  try {
+    const res = await fetch('/api/stats');
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const stats = await res.json();
+    const totalSchemes = stats.total_schemes || 14500;
+    const totalAmcs = stats.total_amcs || 50;
+    const month = stats.latest_holdings_month || '';
+    dataStatus.textContent = `${totalSchemes.toLocaleString()} schemes · ${totalAmcs} AMCs${month ? ' · ' + month : ''}`;
+    document.getElementById('totalSchemesFooter').textContent = totalSchemes.toLocaleString();
+    document.getElementById('totalAmcsFooter').textContent = totalAmcs;
+    renderSelected();
+  } catch (err) {
+    console.error('initApp failed:', err);
+    errorState.classList.remove('hidden');
+    errorDetails.textContent = err.message || 'Unknown error';
+    dataStatus.textContent = 'Error';
+  }
+}
+
+// =====================================================================
+// Live search (debounced)
+// =====================================================================
+let searchTimer = null;
+searchInput.addEventListener('input', () => {
+  const q = searchInput.value.trim();
+  if (searchAbortController) searchAbortController.abort();
+  clearTimeout(searchTimer);
+  if (q.length < 2) {
+    dropdown.classList.add('hidden');
+    searchSpinner.classList.add('hidden');
+    return;
+  }
+  searchSpinner.classList.remove('hidden');
+  searchTimer = setTimeout(() => doSearch(q), 300);
+});
+
+searchInput.addEventListener('focus', () => {
+  if (lastSearchResults.length > 0) renderDropdown(lastSearchResults);
+});
+
+async function doSearch(q) {
+  searchAbortController = new AbortController();
+  try {
+    const res = await fetch('/api/search?q=' + encodeURIComponent(q), { signal: searchAbortController.signal });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const data = await res.json();
+    lastSearchResults = data.filter(s => !selected.has(String(s.family_id)));
+    renderDropdown(lastSearchResults);
+  } catch (err) {
+    if (err.name !== 'AbortError') {
+      console.warn('Search failed:', err);
+      dropdown.innerHTML = `<div class="px-4 py-3 text-sm text-red-600">Search error: ${escapeHtml(err.message)}</div>`;
+      dropdown.classList.remove('hidden');
+    }
+  } finally {
+    searchSpinner.classList.add('hidden');
+  }
+}
+
+function renderDropdown(items) {
+  if (!items || items.length === 0) {
+    dropdown.innerHTML = '<div class="px-4 py-3 text-sm text-slate-500">No schemes match. Try a different keyword (e.g. AMC name like "HDFC" or category like "Mid Cap").</div>';
+    dropdown.classList.remove('hidden');
+    return;
+  }
+  const shown = items.slice(0, 50);
+  dropdown.innerHTML = shown.map(s => `
+    <div class="dropdown-item px-4 py-2 cursor-pointer border-b border-slate-100 last:border-0" data-key="${s.family_id}">
+      <div class="flex items-center justify-between gap-2">
+        <div class="min-w-0">
+          <div class="font-medium text-slate-800 truncate">${escapeHtml(s.name)}</div>
+          <div class="text-xs text-slate-500 truncate">${escapeHtml(s.amc || '')}${s.category ? ' · ' + escapeHtml(s.category) : ''}</div>
+        </div>
+        <span class="text-indigo-600 text-sm shrink-0">+ Add</span>
+      </div>
+    </div>`).join('') + (items.length > 50 ? `<div class="px-4 py-2 text-xs text-slate-400">Showing first 50 of ${items.length}. Refine your search to see more.</div>` : '');
+  dropdown.classList.remove('hidden');
+
+  dropdown.querySelectorAll('.dropdown-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const key = item.dataset.key;
+      const meta = shown.find(s => String(s.family_id) === key);
+      if (meta) addScheme(key, meta);
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#schemeSearch') && !e.target.closest('#dropdown')) {
+    dropdown.classList.add('hidden');
+  }
+});
+
+// =====================================================================
+// Holdings fetch (lazy + cached)
+// =====================================================================
+async function ensureHoldings(family_id) {
+  if (HOLDINGS[family_id]) return HOLDINGS[family_id];
+  if (holdingsInflight[family_id]) return holdingsInflight[family_id];
+
+  holdingsInflight[family_id] = (async () => {
+    const res = await fetch(`/api/holdings/${family_id}`);
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || `HTTP ${res.status}`);
+    }
+    const payload = await res.json();
+    const holdings = {};
+    if (Array.isArray(payload.equity_holdings)) {
+      for (const h of payload.equity_holdings) {
+        if (h.stock_name && h.weight_pct != null) {
+          holdings[h.stock_name] = h.weight_pct;
+        }
+      }
+    }
+    HOLDINGS[family_id] = holdings;
+    HOLDINGS_META[family_id] = {
+      month: payload.month,
+      equity_pct: payload.equity_pct,
+      total_aum: payload.total_aum,
+    };
+    return holdings;
+  })();
+
+  try {
+    return await holdingsInflight[family_id];
+  } finally {
+    delete holdingsInflight[family_id];
+  }
+}
+
+// =====================================================================
+// Selection
+// =====================================================================
+function addScheme(key, meta) {
+  if (selected.size >= MAX_SCHEMES) {
+    alert(`You can select up to ${MAX_SCHEMES} schemes.`);
+    return;
+  }
+  selected.add(key);
+  if (meta) SCHEMES[key] = meta;       // cache so we can render the chip
+  searchInput.value = '';
+  dropdown.classList.add('hidden');
+  lastSearchResults = [];
+  renderSelected();
+  // Pre-fetch in background
+  ensureHoldings(key).catch(e => console.warn('Pre-fetch failed for', key, e));
+}
+
+function removeScheme(key) {
+  selected.delete(key);
+  renderSelected();
+}
+
+function renderSelected() {
+  const arr = [...selected];
+  selectedSchemesEl.innerHTML = arr.map(key => {
+    const s = SCHEMES[key];
+    if (!s) return '';
+    return `
+      <div class="scheme-chip flex items-center gap-2 bg-indigo-50 border border-indigo-200 text-indigo-800 px-3 py-1.5 rounded-full text-sm">
+        <span>${escapeHtml(s.name)}</span>
+        <button class="remove-chip text-indigo-500 hover:text-indigo-800 font-bold" data-key="${key}" title="Remove">×</button>
+      </div>`;
+  }).join('');
+
+  selectedSchemesEl.querySelectorAll('.remove-chip').forEach(btn => {
+    btn.addEventListener('click', () => removeScheme(btn.dataset.key));
+  });
+
+  selectionCountEl.textContent = arr.length === 0 ? 'No schemes selected' :
+    `${arr.length} scheme${arr.length > 1 ? 's' : ''} selected (max ${MAX_SCHEMES})`;
+  analyzeBtn.disabled = arr.length < 2;
+  if (arr.length === 0) {
+    resultsEl.classList.add('hidden');
+    emptyState.classList.remove('hidden');
+  }
+}
+
+// =====================================================================
+// Overlap math
+// =====================================================================
+function normalize(holdings) {
+  const sum = Object.values(holdings).reduce((s, w) => s + w, 0);
+  if (sum === 0) return {};
+  const out = {};
+  for (const [k, v] of Object.entries(holdings)) out[k] = (v / sum) * 100;
+  return out;
+}
+
+function pairwiseOverlap(holdingsA, holdingsB) {
+  const A = normalize(holdingsA);
+  const B = normalize(holdingsB);
+  let overlap = 0;
+  const common = [];
+  for (const stock of Object.keys(A)) {
+    if (B[stock] !== undefined) {
+      const m = Math.min(A[stock], B[stock]);
+      overlap += m;
+      common.push({ stock, weightA: A[stock], weightB: B[stock], min: m });
+    }
+  }
+  return { overlap, common };
+}
+
+// =====================================================================
+// Analyze
+// =====================================================================
+analyzeBtn.addEventListener('click', runAnalysis);
+
+async function runAnalysis() {
+  const keys = [...selected];
+  if (keys.length < 2) return;
+
+  analyzeBtn.disabled = true;
+  const original = analyzeBtn.innerHTML;
+  analyzeBtn.innerHTML = '<span class="spinner spinner-sm mr-2"></span>Loading holdings…';
+
+  try {
+    const results = await Promise.allSettled(keys.map(k => ensureHoldings(k)));
+    const failed = [];
+    results.forEach((r, idx) => {
+      if (r.status === 'rejected') failed.push({ key: keys[idx], reason: String(r.reason).replace(/^Error:\s*/, '') });
+    });
+
+    const usable = keys.filter(k => HOLDINGS[k] && Object.keys(HOLDINGS[k]).length > 0);
+    if (usable.length < 2) {
+      const failNames = failed.map(f => `  • ${SCHEMES[f.key]?.name || f.key}: ${f.reason}`).join('\n');
+      const noHoldings = keys.filter(k => HOLDINGS[k] && Object.keys(HOLDINGS[k]).length === 0)
+        .map(k => `  • ${SCHEMES[k]?.name || k}: no equity holdings`).join('\n');
+      alert(`Need at least 2 schemes with equity holdings to compare.\n\n${failNames}${failNames && noHoldings ? '\n' : ''}${noHoldings}`);
+      return;
+    }
+
+    const schemes = usable.map(k => ({
+      key: k,
+      ...SCHEMES[k],
+      holdings: HOLDINGS[k],
+      meta: HOLDINGS_META[k] || {},
+    }));
+
+    const matrix = schemes.map(() => schemes.map(() => 0));
+    const allPairs = [];
+    for (let i = 0; i < schemes.length; i++) {
+      for (let j = 0; j < schemes.length; j++) {
+        if (i === j) {
+          matrix[i][j] = 100;
+        } else {
+          const r = pairwiseOverlap(schemes[i].holdings, schemes[j].holdings);
+          matrix[i][j] = r.overlap;
+          if (i < j) allPairs.push({ i, j, schemeA: schemes[i].name, schemeB: schemes[j].name, overlap: r.overlap, common: r.common });
+        }
+      }
+    }
+
+    emptyState.classList.add('hidden');
+    resultsEl.classList.remove('hidden');
+
+    renderInsights(allPairs, schemes, failed);
+    renderMatrix(matrix, schemes, allPairs);
+    renderUniqueness(matrix, schemes);
+    renderCommonHoldings(schemes);
+
+    resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } finally {
+    analyzeBtn.innerHTML = original;
+    analyzeBtn.disabled = selected.size < 2;
+  }
+}
+
+function renderInsights(allPairs, schemes, failed) {
+  const sorted = [...allPairs].sort((a, b) => b.overlap - a.overlap);
+  const top3 = sorted.slice(0, 3);
+  const lowest = sorted[sorted.length - 1];
+
+  const months = [...new Set(schemes.map(s => s.meta?.month).filter(Boolean))];
+  let html = '';
+
+  if (months.length > 0) {
+    html += `<div class="text-xs text-slate-500 -mt-1 mb-1">Holdings as of: ${months.join(', ')}</div>`;
+  }
+  if (failed && failed.length > 0) {
+    html += `<div class="text-xs text-red-600 mb-1">⚠ Skipped ${failed.length} scheme(s) without holdings data.</div>`;
+  }
+  if (top3.length > 0) {
+    html += `<div><strong class="text-amber-800">Highest overlap:</strong> <strong>${escapeHtml(top3[0].schemeA)}</strong> and <strong>${escapeHtml(top3[0].schemeB)}</strong> share <strong>${top3[0].overlap.toFixed(1)}%</strong> of their portfolios.`;
+    if (top3[0].overlap > 50) html += ` <span class="text-amber-700">— that's a large overlap; holding both adds limited diversification.</span>`;
+    html += `</div>`;
+  }
+  if (top3.length > 1) {
+    html += `<div><strong class="text-amber-800">Next highest:</strong> ${top3.slice(1).map(p => `<strong>${escapeHtml(p.schemeA)}</strong> ↔ <strong>${escapeHtml(p.schemeB)}</strong> (${p.overlap.toFixed(1)}%)`).join(' &nbsp;·&nbsp; ')}</div>`;
+  }
+  if (lowest && allPairs.length > 1) {
+    html += `<div><strong class="text-emerald-700">Most distinct pair:</strong> <strong>${escapeHtml(lowest.schemeA)}</strong> and <strong>${escapeHtml(lowest.schemeB)}</strong> overlap only <strong>${lowest.overlap.toFixed(1)}%</strong> — these schemes diversify each other well.</div>`;
+  }
+  if (top3[0] && top3[0].overlap > 60) {
+    html += `<div class="mt-3 p-3 bg-white rounded-lg border border-amber-200"><strong>Suggestion:</strong> consider consolidating <strong>${escapeHtml(top3[0].schemeA)}</strong> or <strong>${escapeHtml(top3[0].schemeB)}</strong> — at ${top3[0].overlap.toFixed(0)}% overlap, you're paying expense ratios on largely the same stocks.</div>`;
+  } else if (top3[0] && top3[0].overlap > 40) {
+    html += `<div class="mt-3 p-3 bg-white rounded-lg border border-amber-200"><strong>Suggestion:</strong> ${escapeHtml(top3[0].schemeA)} and ${escapeHtml(top3[0].schemeB)} overlap meaningfully (${top3[0].overlap.toFixed(0)}%). If you want broader diversification, consider replacing one with a fund from a different category.</div>`;
+  }
+  document.getElementById('insightsContent').innerHTML = html;
+}
+
+function colorForOverlap(pct) {
+  const t = Math.min(pct / 100, 1);
+  const stops = [
+    { p: 0,    rgb: [219, 234, 254] },
+    { p: 0.5,  rgb: [99, 102, 241] },
+    { p: 1,    rgb: [49, 46, 129] }
+  ];
+  let lo = stops[0], hi = stops[stops.length - 1];
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (t >= stops[i].p && t <= stops[i+1].p) { lo = stops[i]; hi = stops[i+1]; break; }
+  }
+  const f = (t - lo.p) / (hi.p - lo.p || 1);
+  const r = Math.round(lo.rgb[0] + (hi.rgb[0] - lo.rgb[0]) * f);
+  const g = Math.round(lo.rgb[1] + (hi.rgb[1] - lo.rgb[1]) * f);
+  const b = Math.round(lo.rgb[2] + (hi.rgb[2] - lo.rgb[2]) * f);
+  return { bg: `rgb(${r},${g},${b})`, fg: t > 0.45 ? '#fff' : '#1e293b' };
+}
+
+function renderMatrix(matrix, schemes, allPairs) {
+  const n = schemes.length;
+  const topPairs = [...allPairs].sort((a,b) => b.overlap - a.overlap).slice(0, 3);
+  const highlightSet = new Set(topPairs.map(p => `${p.i}-${p.j}`));
+
+  let html = '<table class="border-collapse mx-auto"><thead><tr><th class="p-2"></th>';
+  for (let j = 0; j < n; j++) {
+    const shortName = schemes[j].name.split(' ').slice(0, 4).join(' ');
+    html += `<th class="p-2 text-xs font-medium text-slate-700 align-bottom" style="height: 130px;">
+      <div style="writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap;" title="${escapeHtml(schemes[j].name)}">${escapeHtml(shortName)}</div>
+    </th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let i = 0; i < n; i++) {
+    html += '<tr>';
+    const shortName = schemes[i].name.split(' ').slice(0, 5).join(' ');
+    html += `<th class="p-2 text-xs font-medium text-slate-700 text-right" style="max-width:220px;" title="${escapeHtml(schemes[i].name)}">${escapeHtml(shortName)}</th>`;
+    for (let j = 0; j < n; j++) {
+      const v = matrix[i][j];
+      const c = colorForOverlap(v);
+      const pairKey = i < j ? `${i}-${j}` : `${j}-${i}`;
+      const isTop = highlightSet.has(pairKey) && i !== j;
+      const ring = isTop ? 'ring-2 ring-amber-400 ring-offset-1' : '';
+      html += `<td class="p-0">
+        <div class="heatmap-cell ${ring} flex items-center justify-center font-medium text-sm rounded"
+          style="width:64px;height:48px;background:${c.bg};color:${c.fg};margin:2px;"
+          title="${escapeHtml(schemes[i].name)} vs ${escapeHtml(schemes[j].name)}: ${v.toFixed(1)}% overlap">
+          ${v.toFixed(0)}${i===j ? '' : '%'}
+        </div>
+      </td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  html += '<p class="text-xs text-slate-500 mt-3 text-center">⭐ Cells with amber ring = top-3 highest-overlap pairs. Hover for exact values.</p>';
+  document.getElementById('matrixContainer').innerHTML = html;
+}
+
+function renderUniqueness(matrix, schemes) {
+  const n = schemes.length;
+  const rows = [];
+  for (let i = 0; i < n; i++) {
+    let maxOverlap = 0, maxIdx = -1;
+    for (let j = 0; j < n; j++) {
+      if (i !== j && matrix[i][j] > maxOverlap) { maxOverlap = matrix[i][j]; maxIdx = j; }
+    }
+    rows.push({ i, scheme: schemes[i], maxOverlap, maxIdx, unique: 100 - maxOverlap });
+  }
+  rows.sort((a, b) => b.unique - a.unique);
+
+  let html = '';
+  for (const r of rows) {
+    const uniqueColor = r.unique > 70 ? 'bg-emerald-500' : r.unique > 40 ? 'bg-blue-500' : 'bg-amber-500';
+    const partner = r.maxIdx >= 0 ? schemes[r.maxIdx].name : 'n/a';
+    html += `
+      <div>
+        <div class="flex items-center justify-between text-sm mb-1">
+          <div>
+            <span class="font-medium text-slate-800">${escapeHtml(r.scheme.name)}</span>
+            <span class="text-slate-500 ml-2">${escapeHtml(r.scheme.category || '')}</span>
+          </div>
+          <div class="text-right">
+            <span class="font-medium text-slate-700">${r.unique.toFixed(0)}% unique</span>
+            <span class="text-slate-400 ml-2">(${r.maxOverlap.toFixed(0)}% overlap with ${escapeHtml(partner)})</span>
+          </div>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+          <div class="${uniqueColor} h-3 rounded-full transition-all" style="width:${r.unique}%"></div>
+        </div>
+      </div>`;
+  }
+  document.getElementById('uniquenessContent').innerHTML = html;
+}
+
+function renderCommonHoldings(schemes) {
+  const stockMap = {};
+  for (const s of schemes) {
+    for (const [stock, w] of Object.entries(s.holdings)) {
+      if (!stockMap[stock]) stockMap[stock] = { stock, schemes: [] };
+      stockMap[stock].schemes.push({ name: s.name, weight: w });
+    }
+  }
+  const common = Object.values(stockMap)
+    .filter(x => x.schemes.length >= 2)
+    .map(x => ({
+      ...x,
+      avgWeight: x.schemes.reduce((s, e) => s + e.weight, 0) / x.schemes.length,
+      maxWeight: Math.max(...x.schemes.map(e => e.weight)),
+      coverage: x.schemes.length
+    }))
+    .sort((a, b) => b.coverage - a.coverage || b.avgWeight - a.avgWeight)
+    .slice(0, 25);
+
+  if (common.length === 0) {
+    document.getElementById('commonHoldingsContent').innerHTML =
+      '<p class="text-slate-500 text-sm">No stocks are held by more than one of your selected schemes — these schemes diversify each other very well!</p>';
+    return;
+  }
+
+  let html = `
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead>
+          <tr class="border-b border-slate-200 text-left text-xs font-medium text-slate-600 uppercase">
+            <th class="py-2 pr-4">Stock</th>
+            <th class="py-2 pr-4 text-center">Held by</th>
+            <th class="py-2 pr-4 text-right">Avg weight</th>
+            <th class="py-2 pr-4 text-right">Max weight</th>
+            <th class="py-2 pr-0">Schemes</th>
+          </tr>
+        </thead>
+        <tbody>`;
+  for (const c of common) {
+    html += `
+      <tr class="border-b border-slate-100 hover:bg-slate-50">
+        <td class="py-2 pr-4 font-medium text-slate-800">${escapeHtml(c.stock)}</td>
+        <td class="py-2 pr-4 text-center">
+          <span class="inline-block bg-indigo-100 text-indigo-700 rounded-full px-2 py-0.5 text-xs font-medium">${c.coverage} of ${schemes.length}</span>
+        </td>
+        <td class="py-2 pr-4 text-right text-slate-700">${c.avgWeight.toFixed(1)}%</td>
+        <td class="py-2 pr-4 text-right text-slate-700">${c.maxWeight.toFixed(1)}%</td>
+        <td class="py-2 text-xs text-slate-500">${c.schemes.map(s => `${escapeHtml(s.name.split(' ').slice(0,4).join(' '))} (${s.weight}%)`).join(', ')}</td>
+      </tr>`;
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('commonHoldingsContent').innerHTML = html;
+}
+
+// =====================================================================
+// Buttons
+// =====================================================================
+clearBtn.addEventListener('click', () => {
+  selected.clear();
+  renderSelected();
+});
+
+// Sample portfolio: do live searches for 5 well-known schemes
+sampleBtn.addEventListener('click', async () => {
+  selected.clear();
+  Object.keys(SCHEMES).forEach(k => delete SCHEMES[k]);
+  renderSelected();
+
+  sampleBtn.disabled = true;
+  const orig = sampleBtn.textContent;
+  sampleBtn.textContent = 'Loading sample…';
+
+  const queries = [
+    'Parag Parikh Flexi Cap',
+    'HDFC Flexi Cap Fund',
+    'Axis Midcap Fund',
+    'Nippon India Small Cap Fund',
+    'UTI Nifty 50 Index',
+  ];
+  try {
+    const responses = await Promise.all(queries.map(q =>
+      fetch('/api/search?q=' + encodeURIComponent(q)).then(r => r.json()).catch(() => [])
+    ));
+    responses.forEach(arr => {
+      if (Array.isArray(arr) && arr.length > 0) {
+        const top = arr[0];
+        const id = String(top.family_id);
+        if (!selected.has(id) && selected.size < 5) {
+          SCHEMES[id] = top;
+          selected.add(id);
+        }
+      }
+    });
+    renderSelected();
+    if (selected.size >= 2) {
+      await runAnalysis();
+    } else {
+      alert('Could not load sample — search returned no results.');
+    }
+  } finally {
+    sampleBtn.textContent = orig;
+    sampleBtn.disabled = false;
+  }
+});
+
+// Kick off
+initApp();
+</script>
+</body>
+</html>
