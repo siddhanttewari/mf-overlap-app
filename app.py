@@ -34,7 +34,11 @@ app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
 # ---------- Supabase config (persistent cache layer) ----------
-SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+_SUPABASE_RAW = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
+# Normalize: accept the base URL with OR without /rest/v1 suffix
+if _SUPABASE_RAW.endswith("/rest/v1"):
+    _SUPABASE_RAW = _SUPABASE_RAW[: -len("/rest/v1")]
+SUPABASE_URL = _SUPABASE_RAW
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or ""
 SUPABASE_ENABLED = bool(SUPABASE_URL and SUPABASE_KEY)
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN") or ""
@@ -188,18 +192,20 @@ def _mark_upstream_down():
     _upstream_outage_until = time.time() + OUTAGE_COOLDOWN
 
 
-def _http_get_json(url, retries=1):
+def _http_get_json(url, retries=1, timeout=None):
     """
-    GET with one quick retry. Short timeout means we fail fast and let
-    the caller fall back to snapshot data rather than hanging the user.
+    GET with one quick retry. Default timeout is REQUEST_TIMEOUT (short)
+    for user-facing calls. Pass a larger value for seed/admin work where
+    we'd rather wait than fail.
     """
+    t = timeout if timeout is not None else REQUEST_TIMEOUT
     last_err = None
     for attempt in range(retries + 1):
         if attempt > 0:
             time.sleep(0.4)
         try:
             req = urllib.request.Request(url, headers=HTTP_HEADERS)
-            with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
+            with urllib.request.urlopen(req, timeout=t) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             last_err = e
@@ -549,6 +555,87 @@ def admin_seed_snapshot():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route("/api/admin/seed-holdings-batch", methods=["GET", "POST"])
+def admin_seed_holdings_batch():
+    """
+    Fetch holdings for a batch of funds that don't have any in Supabase yet.
+    Call this repeatedly until it reports 0 funds remaining.
+    Query params: ?batch_size=50  (default 50, max 100)
+    """
+    err = _require_admin()
+    if err:
+        return err
+    if not SUPABASE_ENABLED:
+        return jsonify({"error": "Supabase not configured"}), 503
+
+    batch_size = min(int(request.args.get("batch_size", "50")), 100)
+
+    # Find schemes with no holdings yet
+    try:
+        all_schemes = _supabase_request("GET", "schemes", params={
+            "select": "family_id",
+            "family_id": "gt.0",  # skip negative snapshot IDs
+            "limit": "10000",
+        }) or []
+        existing_holdings = _supabase_request("GET", "holdings", params={
+            "select": "family_id",
+            "limit": "100000",
+        }) or []
+    except Exception as e:
+        return jsonify({"error": f"Supabase query failed: {e}"}), 502
+
+    with_holdings = {h["family_id"] for h in existing_holdings}
+    pending = [s["family_id"] for s in all_schemes if s["family_id"] not in with_holdings]
+
+    if not pending:
+        return jsonify({
+            "status": "complete",
+            "total_schemes": len(all_schemes),
+            "schemes_with_holdings": len(with_holdings),
+            "remaining": 0,
+        })
+
+    batch = pending[:batch_size]
+    seeded = 0
+    errors = 0
+    for fid in batch:
+        try:
+            url = f"{MFDATA_BASE}/families/{fid}/holdings"
+            resp = _http_get_json(url, timeout=30, retries=2)
+            if resp.get("status") != "success":
+                errors += 1
+                continue
+            payload = resp.get("data", {})
+            month = payload.get("month")
+            rows = [
+                {
+                    "family_id": fid,
+                    "stock_name": h["stock_name"],
+                    "weight_pct": h["weight_pct"],
+                    "sector": h.get("sector"),
+                    "as_of_month": month,
+                }
+                for h in payload.get("equity_holdings", [])
+                if h.get("stock_name") and h.get("weight_pct") is not None
+            ]
+            if rows:
+                supabase_upsert("holdings", rows)
+                seeded += 1
+            time.sleep(2.2)  # rate limit politeness
+        except Exception:
+            errors += 1
+
+    return jsonify({
+        "status": "batch_done",
+        "batch_size": len(batch),
+        "seeded_this_batch": seeded,
+        "errors_this_batch": errors,
+        "total_remaining": len(pending) - len(batch),
+        "total_schemes": len(all_schemes),
+        "schemes_with_holdings": len(with_holdings) + seeded,
+    })
+
+
 @app.route("/api/admin/seed-from-mfdata", methods=["GET", "POST"])
 def admin_seed_from_mfdata():
     """
@@ -576,7 +663,9 @@ def admin_seed_from_mfdata():
             "Balanced Advantage Fund", "Equity Savings",
         ]
     max_per_cat = int(request.args.get("max_per_category", "200"))
-    fetch_holdings = request.args.get("fetch_holdings", "1") == "1"
+    # Default: fetch only scheme metadata (fast). Holdings is opt-in
+    # because it can take 30+ minutes for thousands of funds.
+    fetch_holdings = request.args.get("fetch_holdings", "0") == "1"
 
     families = {}
     fetched_log = []
@@ -586,7 +675,9 @@ def admin_seed_from_mfdata():
                 f"{MFDATA_BASE}/schemes?category={urllib.parse.quote(cat)}"
                 f"&plan_type=direct&limit={max_per_cat}"
             )
-            resp = _http_get_json(url)
+            # Long timeout for seed — MFData.in can be slow when fetching
+            # large category listings, but we'd rather wait than retry.
+            resp = _http_get_json(url, timeout=45, retries=2)
             for s in resp.get("data", []):
                 fid = s.get("family_id")
                 if not fid or fid in families:
@@ -599,6 +690,7 @@ def admin_seed_from_mfdata():
                     "amfi_code": s.get("amfi_code"),
                 }
             fetched_log.append({"category": cat, "running_total": len(families)})
+            time.sleep(2.0)  # polite delay between category fetches
         except Exception as e:
             fetched_log.append({"category": cat, "error": str(e)})
 
@@ -615,11 +707,10 @@ def admin_seed_from_mfdata():
     holdings_seeded = 0
     holdings_errors = 0
     if fetch_holdings:
-        # Fetch holdings for each family — slow (~30 req/min rate limit)
         for fid in families:
             try:
                 url = f"{MFDATA_BASE}/families/{fid}/holdings"
-                resp = _http_get_json(url)
+                resp = _http_get_json(url, timeout=30, retries=2)
                 if resp.get("status") != "success":
                     continue
                 payload = resp.get("data", {})
