@@ -27,8 +27,13 @@ from threading import Lock
 from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 
+from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
+
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
+
+# Backup data source: MFapi.in for scheme list/NAVs (no holdings)
+MFAPI_BASE = "https://api.mfapi.in/mf"
 
 # ---------- Config ----------
 MFDATA_BASE = "https://mfdata.in/api/v1"
@@ -141,6 +146,51 @@ def health():
     })
 
 
+def _snapshot_stats():
+    """Synthetic stats payload when live data source is unavailable."""
+    amcs = {s["amc"] for s in SNAPSHOT_SCHEMES.values()}
+    return {
+        "total_schemes": len(SNAPSHOT_SCHEMES),
+        "total_amcs": len(amcs),
+        "latest_holdings_month": SNAPSHOT_DATE,
+        "_source": "snapshot",
+    }
+
+
+def _snapshot_search(q):
+    """Search the bundled snapshot — matches by name, AMC, or category."""
+    ql = (q or "").lower()
+    results = []
+    for fid, s in SNAPSHOT_SCHEMES.items():
+        hay = f"{s['name']} {s['amc']} {s.get('category', '')}".lower()
+        if ql in hay:
+            results.append({
+                "family_id": fid,           # negative → snapshot marker
+                "name": s["name"],
+                "category": s.get("category"),
+                "amc": s["amc"],
+                "amfi_code": None,
+                "_source": "snapshot",
+            })
+    results.sort(key=lambda x: x["name"].lower())
+    return results
+
+
+def _snapshot_holdings_payload(fid):
+    """Convert snapshot.SCHEMES entry into the same shape as MFData.in returns."""
+    s = SNAPSHOT_SCHEMES[fid]
+    return {
+        "month": s.get("month", SNAPSHOT_DATE),
+        "total_aum": None,
+        "equity_pct": None,
+        "equity_holdings": [
+            {"stock_name": stock, "weight_pct": weight, "sector": None}
+            for stock, weight in s["holdings"].items()
+        ],
+        "_source": "snapshot",
+    }
+
+
 @app.route("/api/stats")
 def api_stats():
     with _lock:
@@ -154,10 +204,11 @@ def api_stats():
             _stats_cache["data"] = data
             _stats_cache["fetched_at"] = time.time()
         return jsonify(data)
-    except Exception as e:
+    except Exception:
+        # Stale cache first, then snapshot fallback so the UI never shows hard error
         if _stale_ok(_stats_cache, STATS_STALE_OK):
             return jsonify({**_stats_cache["data"], "_stale": True})
-        return jsonify({"error": f"Upstream unavailable: {e}"}), 502
+        return jsonify(_snapshot_stats())
 
 
 @app.route("/api/search")
@@ -175,10 +226,12 @@ def api_search():
     url = f"{MFDATA_BASE}/search?q={urllib.parse.quote(q)}"
     try:
         resp = _http_get_json(url)
-    except Exception as e:
+    except Exception:
+        # Try stale cache first
         if _stale_ok(cached, SEARCH_STALE_OK):
             return jsonify(cached["data"])
-        return jsonify({"error": f"Upstream unavailable: {e}"}), 502
+        # Fall back to snapshot search so UI is never empty
+        return jsonify(_snapshot_search(q))
 
     schemes = resp.get("data", []) if isinstance(resp, dict) else []
 
@@ -214,6 +267,12 @@ def api_search():
 
 @app.route("/api/holdings/<int:family_id>")
 def api_holdings(family_id):
+    # Snapshot entries use negative family_ids — serve directly from bundle
+    if family_id < 0:
+        if family_id in SNAPSHOT_SCHEMES:
+            return jsonify(_snapshot_holdings_payload(family_id))
+        return jsonify({"error": "Unknown snapshot fund"}), 404
+
     with _lock:
         cached = _holdings_cache.get(family_id)
         if _fresh(cached, HOLDINGS_TTL):
