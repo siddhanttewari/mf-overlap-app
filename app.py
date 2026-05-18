@@ -43,7 +43,8 @@ SEARCH_TTL = 10 * 60            # 10 min fresh
 SEARCH_STALE_OK = 6 * 60 * 60
 STATS_TTL = 60 * 60
 STATS_STALE_OK = 24 * 60 * 60
-REQUEST_TIMEOUT = 45
+REQUEST_TIMEOUT = 6              # fail fast — better to fall back than to hang
+OUTAGE_COOLDOWN = 5 * 60         # if upstream fails, skip it for 5 min
 
 # Browser-looking headers — important on Render where the outbound IP is
 # shared/datacenter, and upstream Cloudflare flags non-browser User-Agents.
@@ -74,20 +75,30 @@ _lock = Lock()
 _holdings_cache = {}
 _search_cache = {}
 _stats_cache = {"data": None, "fetched_at": 0}
+# Circuit breaker: once MFData.in fails, skip it for OUTAGE_COOLDOWN seconds.
+_upstream_outage_until = 0
 
 
-def _http_get_json(url, retries=2):
+def _upstream_is_down():
+    """True if we recently detected MFData.in is unreachable."""
+    return time.time() < _upstream_outage_until
+
+
+def _mark_upstream_down():
+    """Trip the circuit breaker — skip MFData.in for the cooldown window."""
+    global _upstream_outage_until
+    _upstream_outage_until = time.time() + OUTAGE_COOLDOWN
+
+
+def _http_get_json(url, retries=1):
     """
-    GET a URL with retries on transient upstream errors.
-    Cloudflare-fronted endpoints (like mfdata.in) sometimes return 522/524
-    when their origin is briefly slow; retrying after a short delay almost
-    always succeeds.
+    GET with one quick retry. Short timeout means we fail fast and let
+    the caller fall back to snapshot data rather than hanging the user.
     """
-    delays = [0, 1.5, 3.5]
     last_err = None
     for attempt in range(retries + 1):
-        if delays[min(attempt, len(delays) - 1)] > 0:
-            time.sleep(delays[min(attempt, len(delays) - 1)])
+        if attempt > 0:
+            time.sleep(0.4)
         try:
             req = urllib.request.Request(url, headers=HTTP_HEADERS)
             with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
@@ -197,6 +208,11 @@ def api_stats():
         if _fresh(_stats_cache, STATS_TTL):
             return jsonify(_stats_cache["data"])
 
+    if _upstream_is_down():
+        if _stale_ok(_stats_cache, STATS_STALE_OK):
+            return jsonify({**_stats_cache["data"], "_stale": True})
+        return jsonify(_snapshot_stats())
+
     try:
         resp = _http_get_json(f"{MFDATA_BASE}/stats")
         data = resp.get("data", {})
@@ -205,7 +221,7 @@ def api_stats():
             _stats_cache["fetched_at"] = time.time()
         return jsonify(data)
     except Exception:
-        # Stale cache first, then snapshot fallback so the UI never shows hard error
+        _mark_upstream_down()
         if _stale_ok(_stats_cache, STATS_STALE_OK):
             return jsonify({**_stats_cache["data"], "_stale": True})
         return jsonify(_snapshot_stats())
@@ -223,14 +239,19 @@ def api_search():
         if _fresh(cached, SEARCH_TTL):
             return jsonify(cached["data"])
 
+    # Circuit breaker: if MFData.in recently failed, skip it and go straight to fallback
+    if _upstream_is_down():
+        if _stale_ok(cached, SEARCH_STALE_OK):
+            return jsonify(cached["data"])
+        return jsonify(_snapshot_search(q))
+
     url = f"{MFDATA_BASE}/search?q={urllib.parse.quote(q)}"
     try:
         resp = _http_get_json(url)
     except Exception:
-        # Try stale cache first
+        _mark_upstream_down()
         if _stale_ok(cached, SEARCH_STALE_OK):
             return jsonify(cached["data"])
-        # Fall back to snapshot search so UI is never empty
         return jsonify(_snapshot_search(q))
 
     schemes = resp.get("data", []) if isinstance(resp, dict) else []
@@ -278,16 +299,24 @@ def api_holdings(family_id):
         if _fresh(cached, HOLDINGS_TTL):
             return jsonify(cached["data"])
 
+    # Circuit breaker — don't hang the user if we know upstream is down
+    if _upstream_is_down():
+        if _stale_ok(cached, HOLDINGS_STALE_OK):
+            return jsonify(cached["data"])
+        return jsonify({"error": "Live data source temporarily unavailable. Try a snapshot fund instead."}), 503
+
     url = f"{MFDATA_BASE}/families/{family_id}/holdings"
     try:
         resp = _http_get_json(url)
     except urllib.error.HTTPError as e:
         if e.code == 404:
             return jsonify({"error": "Holdings not available for this fund"}), 404
+        _mark_upstream_down()
         if _stale_ok(cached, HOLDINGS_STALE_OK):
             return jsonify(cached["data"])
         return jsonify({"error": f"Upstream returned {e.code}"}), 502
     except Exception as e:
+        _mark_upstream_down()
         if _stale_ok(cached, HOLDINGS_STALE_OK):
             return jsonify(cached["data"])
         return jsonify({"error": f"Upstream unavailable: {e}"}), 502
@@ -305,11 +334,13 @@ def api_holdings(family_id):
 
 @app.route("/api/refresh", methods=["POST"])
 def api_refresh():
+    global _upstream_outage_until
     with _lock:
         _holdings_cache.clear()
         _search_cache.clear()
         _stats_cache["data"] = None
         _stats_cache["fetched_at"] = 0
+    _upstream_outage_until = 0  # reset circuit breaker — try upstream again
     return jsonify({"status": "refreshed"})
 
 
