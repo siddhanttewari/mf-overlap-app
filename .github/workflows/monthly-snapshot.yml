@@ -1,0 +1,81 @@
+name: Monthly Snapshot Update
+
+on:
+  # 10th of each month at 9AM IST (3:30 AM UTC)
+  schedule:
+    - cron: '30 3 10 * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+    inputs:
+      use_fallback:
+        description: 'Use curated data (skip MFData.in)'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'false'
+          - 'true'
+
+permissions:
+  contents: write
+
+jobs:
+  update-snapshot:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run snapshot updater
+        run: |
+          if [ "${{ github.event.inputs.use_fallback }}" = "true" ]; then
+            echo "Using curated fallback..."
+            python update_snapshot.py --fallback --output snapshot.py
+          else
+            echo "Fetching live from MFData.in..."
+            python update_snapshot.py --output snapshot.py
+          fi
+
+      - name: Verify snapshot
+        run: |
+          python -c "
+          from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
+          n = len(SNAPSHOT_SCHEMES)
+          print(f'Snapshot: {n} funds, date: {SNAPSHOT_DATE}')
+          if n < 20:
+              print('ERROR: Too few funds')
+              exit(1)
+          cats = {}
+          for s in SNAPSHOT_SCHEMES.values():
+              cats.setdefault(s.get('category','?'), []).append(s['name'])
+          for cat, names in sorted(cats.items()):
+              print(f'  {cat}: {len(names)}')
+          print(f'Total: {n} funds — OK')
+          "
+
+      - name: Check for changes
+        id: changes
+        run: |
+          git diff --quiet snapshot.py && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
+
+      - name: Commit and push
+        if: steps.changes.outputs.changed == 'true'
+        run: |
+          git config user.name "Snapshot Bot"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          MONTH=$(date +"%B %Y")
+          git add snapshot.py
+          git commit -m "chore: update snapshot holdings — ${MONTH}"
+          git push
+          echo "✅ Snapshot updated for ${MONTH}"
+
+      - name: No changes
+        if: steps.changes.outputs.changed == 'false'
+        run: echo "ℹ️ No changes in snapshot data."
