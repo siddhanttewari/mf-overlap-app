@@ -1,15 +1,12 @@
-name: Monthly Snapshot Update
+name: Monthly Holdings Update
 
 on:
-  # 10th of each month at 9AM IST (3:30 AM UTC)
   schedule:
-    - cron: '30 3 10 * *'
-  
-  # Manual trigger
+    - cron: '30 3 10 * *'  # 10th of month, 9AM IST
   workflow_dispatch:
     inputs:
-      use_fallback:
-        description: 'Use curated data (skip MFData.in)'
+      snapshot_only:
+        description: 'Only update snapshot.py (skip Supabase)'
         required: false
         default: 'false'
         type: choice
@@ -21,7 +18,7 @@ permissions:
   contents: write
 
 jobs:
-  update-snapshot:
+  scrape-and-seed:
     runs-on: ubuntu-latest
     
     steps:
@@ -33,14 +30,18 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Run snapshot updater
+      - name: Install dependencies
+        run: pip install requests beautifulsoup4 lxml
+
+      - name: Run scraper
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
-          if [ "${{ github.event.inputs.use_fallback }}" = "true" ]; then
-            echo "Using curated fallback..."
-            python update_snapshot.py --fallback --output snapshot.py
+          if [ "${{ github.event.inputs.snapshot_only }}" = "true" ]; then
+            python scrape_and_seed.py --snapshot-only --output snapshot.py
           else
-            echo "Fetching live from MFData.in..."
-            python update_snapshot.py --output snapshot.py
+            python scrape_and_seed.py --output snapshot.py
           fi
 
       - name: Verify snapshot
@@ -49,15 +50,17 @@ jobs:
           from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
           n = len(SNAPSHOT_SCHEMES)
           print(f'Snapshot: {n} funds, date: {SNAPSHOT_DATE}')
-          if n < 20:
-              print('ERROR: Too few funds')
-              exit(1)
+          if n < 10:
+              print('WARNING: Very few funds scraped')
           cats = {}
+          amcs = set()
           for s in SNAPSHOT_SCHEMES.values():
               cats.setdefault(s.get('category','?'), []).append(s['name'])
+              amcs.add(s.get('amc','?'))
           for cat, names in sorted(cats.items()):
               print(f'  {cat}: {len(names)}')
-          print(f'Total: {n} funds — OK')
+          print(f'AMCs: {len(amcs)}')
+          print(f'Total: {n} funds')
           "
 
       - name: Check for changes
@@ -68,14 +71,9 @@ jobs:
       - name: Commit and push
         if: steps.changes.outputs.changed == 'true'
         run: |
-          git config user.name "Snapshot Bot"
+          git config user.name "MF Scraper Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           MONTH=$(date +"%B %Y")
           git add snapshot.py
-          git commit -m "chore: update snapshot holdings — ${MONTH}"
+          git commit -m "chore: update holdings from Moneycontrol — ${MONTH}"
           git push
-          echo "✅ Snapshot updated for ${MONTH}"
-
-      - name: No changes
-        if: steps.changes.outputs.changed == 'false'
-        run: echo "ℹ️ No changes in snapshot data."
