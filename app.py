@@ -2,6 +2,8 @@
 MF Overlap App — Backend
 ========================
 Thin proxy to MFData.in (https://mfdata.in) with in-memory caching.
+Snapshot (bundled holdings) is the PRIMARY data source for reliability.
+MFData.in is used as a supplementary source when available.
 
 Endpoints:
   GET  /                              -> serves the frontend
@@ -10,12 +12,6 @@ Endpoints:
   GET  /api/search?q=...              -> live scheme search (deduped by family_id)
   GET  /api/holdings/<family_id>      -> holdings for a fund (cached)
   POST /api/refresh                   -> bust caches
-
-Reliability features:
-  - Browser-like User-Agent + headers (avoids upstream Cloudflare bot blocks)
-  - Retry with backoff on 5xx / 522 / 524 / 429
-  - Stale-cache fallback: if upstream fails but we have an older cached
-    response, serve that instead of erroring
 """
 
 import urllib.request
@@ -35,7 +31,6 @@ CORS(app)
 
 # ---------- Supabase config (persistent cache layer) ----------
 _SUPABASE_RAW = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
-# Normalize: accept the base URL with OR without /rest/v1 suffix
 if _SUPABASE_RAW.endswith("/rest/v1"):
     _SUPABASE_RAW = _SUPABASE_RAW[: -len("/rest/v1")]
 SUPABASE_URL = _SUPABASE_RAW
@@ -43,22 +38,19 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY") or ""
 SUPABASE_ENABLED = bool(SUPABASE_URL and SUPABASE_KEY)
 ADMIN_TOKEN = os.environ.get("ADMIN_TOKEN") or ""
 
-# Backup data source: MFapi.in for scheme list/NAVs (no holdings)
 MFAPI_BASE = "https://api.mfapi.in/mf"
 
 # ---------- Config ----------
 MFDATA_BASE = "https://mfdata.in/api/v1"
-HOLDINGS_TTL = 60 * 60          # 1 hour fresh
-HOLDINGS_STALE_OK = 24 * 60 * 60  # serve stale up to 24h if upstream fails
-SEARCH_TTL = 10 * 60            # 10 min fresh
+HOLDINGS_TTL = 60 * 60
+HOLDINGS_STALE_OK = 24 * 60 * 60
+SEARCH_TTL = 10 * 60
 SEARCH_STALE_OK = 6 * 60 * 60
 STATS_TTL = 60 * 60
 STATS_STALE_OK = 24 * 60 * 60
-REQUEST_TIMEOUT = 6              # fail fast — better to fall back than to hang
-OUTAGE_COOLDOWN = 5 * 60         # if upstream fails, skip it for 5 min
+REQUEST_TIMEOUT = 6
+OUTAGE_COOLDOWN = 5 * 60
 
-# Browser-looking headers — important on Render where the outbound IP is
-# shared/datacenter, and upstream Cloudflare flags non-browser User-Agents.
 HTTP_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -86,15 +78,13 @@ _lock = Lock()
 _holdings_cache = {}
 _search_cache = {}
 _stats_cache = {"data": None, "fetched_at": 0}
-# Circuit breaker: once MFData.in fails, skip it for OUTAGE_COOLDOWN seconds.
 _upstream_outage_until = 0
 
 
 # ---------- Supabase REST helpers ----------
-# We use direct REST calls (no supabase-py dependency) — PostgREST is well-documented.
 def _supabase_request(method, path, params=None, body=None, timeout=12):
     if not SUPABASE_ENABLED:
-        raise RuntimeError("Supabase not configured (set SUPABASE_URL + SUPABASE_KEY)")
+        raise RuntimeError("Supabase not configured")
     url = f"{SUPABASE_URL}/rest/v1/{path}"
     if params:
         url += "?" + urllib.parse.urlencode(params, safe=".*,()<>=:")
@@ -117,7 +107,6 @@ def _supabase_request(method, path, params=None, body=None, timeout=12):
 
 
 def supabase_search_schemes(q, limit=50):
-    """Search Supabase schemes table by name / amc / category."""
     qe = q.replace("*", "").replace(",", "")
     params = {
         "select": "family_id,name,amc,category,amfi_code",
@@ -129,7 +118,6 @@ def supabase_search_schemes(q, limit=50):
 
 
 def supabase_get_holdings(family_id):
-    """Get scheme metadata + holdings for one family_id from Supabase."""
     scheme_rows = _supabase_request("GET", "schemes", params={
         "select": "family_id,name,amc,category",
         "family_id": f"eq.{family_id}",
@@ -160,7 +148,6 @@ def supabase_get_holdings(family_id):
 
 
 def supabase_count_schemes():
-    """Return scheme count from Supabase (best-effort)."""
     try:
         rows = _supabase_request("GET", "schemes", params={"select": "family_id"})
         return len(rows or [])
@@ -169,10 +156,8 @@ def supabase_count_schemes():
 
 
 def supabase_upsert(table, rows):
-    """Bulk upsert (insert or update) rows into a Supabase table."""
     if not rows:
         return 0
-    # PostgREST accepts batches; chunk to be safe
     CHUNK = 500
     inserted = 0
     for i in range(0, len(rows), CHUNK):
@@ -182,22 +167,15 @@ def supabase_upsert(table, rows):
 
 
 def _upstream_is_down():
-    """True if we recently detected MFData.in is unreachable."""
     return time.time() < _upstream_outage_until
 
 
 def _mark_upstream_down():
-    """Trip the circuit breaker — skip MFData.in for the cooldown window."""
     global _upstream_outage_until
     _upstream_outage_until = time.time() + OUTAGE_COOLDOWN
 
 
 def _http_get_json(url, retries=1, timeout=None):
-    """
-    GET with one quick retry. Default timeout is REQUEST_TIMEOUT (short)
-    for user-facing calls. Pass a larger value for seed/admin work where
-    we'd rather wait than fail.
-    """
     t = timeout if timeout is not None else REQUEST_TIMEOUT
     last_err = None
     for attempt in range(retries + 1):
@@ -257,12 +235,12 @@ def health():
         "status": "ok",
         "holdings_cached": len(_holdings_cache),
         "search_cached": len(_search_cache),
-        "data_source": "mfdata.in",
+        "snapshot_funds": len(SNAPSHOT_SCHEMES),
+        "data_source": "snapshot (primary) + mfdata.in (supplementary)",
     })
 
 
 def _snapshot_stats():
-    """Synthetic stats payload when live data source is unavailable."""
     amcs = {s["amc"] for s in SNAPSHOT_SCHEMES.values()}
     return {
         "total_schemes": len(SNAPSHOT_SCHEMES),
@@ -273,14 +251,13 @@ def _snapshot_stats():
 
 
 def _snapshot_search(q):
-    """Search the bundled snapshot — matches by name, AMC, or category."""
     ql = (q or "").lower()
     results = []
     for fid, s in SNAPSHOT_SCHEMES.items():
         hay = f"{s['name']} {s['amc']} {s.get('category', '')}".lower()
         if ql in hay:
             results.append({
-                "family_id": fid,           # negative → snapshot marker
+                "family_id": fid,
                 "name": s["name"],
                 "category": s.get("category"),
                 "amc": s["amc"],
@@ -292,7 +269,6 @@ def _snapshot_search(q):
 
 
 def _snapshot_holdings_payload(fid):
-    """Convert snapshot.SCHEMES entry into the same shape as MFData.in returns."""
     s = SNAPSHOT_SCHEMES[fid]
     return {
         "month": s.get("month", SNAPSHOT_DATE),
@@ -306,43 +282,9 @@ def _snapshot_holdings_payload(fid):
     }
 
 
-@app.route("/api/stats")
-def api_stats():
-    with _lock:
-        if _fresh(_stats_cache, STATS_TTL):
-            return jsonify(_stats_cache["data"])
-
-    # 1) Try MFData.in for the richest stats (when available)
-    if not _upstream_is_down():
-        try:
-            resp = _http_get_json(f"{MFDATA_BASE}/stats")
-            data = resp.get("data", {})
-            with _lock:
-                _stats_cache["data"] = data
-                _stats_cache["fetched_at"] = time.time()
-            return jsonify(data)
-        except Exception:
-            _mark_upstream_down()
-
-    # 2) Fall back: stale cache
-    if _stale_ok(_stats_cache, STATS_STALE_OK):
-        return jsonify({**_stats_cache["data"], "_stale": True})
-
-    # 3) Supabase count (if populated)
-    if SUPABASE_ENABLED:
-        count = supabase_count_schemes()
-        if count > 0:
-            return jsonify({
-                "total_schemes": count,
-                "total_amcs": None,
-                "latest_holdings_month": SNAPSHOT_DATE,
-                "_source": "supabase",
-            })
-
-    # 4) Bundled snapshot
-    return jsonify(_snapshot_stats())
-
-
+# ============================================================
+# SEARCH — Snapshot is PRIMARY, live sources supplement
+# ============================================================
 @app.route("/api/search")
 def api_search():
     q = (request.args.get("q") or "").strip()
@@ -350,77 +292,116 @@ def api_search():
         return jsonify([])
 
     key = q.lower()
-    with _lock:
-        cached = _search_cache.get(key)
-        if _fresh(cached, SEARCH_TTL):
-            return jsonify(cached["data"])
 
-    # 1) Try Supabase first (persistent cache, always fast)
+    # 1) ALWAYS start with snapshot results (primary — always available)
+    results_by_name = {}
+    for fid, s in SNAPSHOT_SCHEMES.items():
+        hay = f"{s['name']} {s['amc']} {s.get('category', '')}".lower()
+        if key in hay:
+            clean_name = s["name"].lower().strip()
+            results_by_name[clean_name] = {
+                "family_id": fid,
+                "name": s["name"],
+                "category": s.get("category"),
+                "amc": s["amc"],
+                "amfi_code": None,
+                "_source": "snapshot",
+            }
+
+    # 2) Supplement with Supabase (if configured)
     if SUPABASE_ENABLED:
         try:
-            results = supabase_search_schemes(q)
-            if results:
-                with _lock:
-                    _search_cache[key] = {"data": results, "fetched_at": time.time()}
-                return jsonify(results)
+            sb_results = supabase_search_schemes(q)
+            for r in (sb_results or []):
+                clean_name = (r.get("name") or "").lower().strip()
+                if clean_name not in results_by_name:
+                    results_by_name[clean_name] = r
         except Exception as e:
             print(f"[supabase] search failed for '{q}': {e}")
 
-    # 2) Circuit breaker: skip MFData.in if recently failed
-    if _upstream_is_down():
-        if _stale_ok(cached, SEARCH_STALE_OK):
-            return jsonify(cached["data"])
-        return jsonify(_snapshot_search(q))
+    # 3) Supplement with MFData.in (only if not in outage — bonus, not required)
+    if not _upstream_is_down():
+        with _lock:
+            cached = _search_cache.get(key)
+        if _fresh(cached, SEARCH_TTL):
+            for r in cached["data"]:
+                clean_name = (r.get("name") or "").lower().strip()
+                if clean_name not in results_by_name:
+                    results_by_name[clean_name] = r
+        else:
+            url = f"{MFDATA_BASE}/search?q={urllib.parse.quote(q)}"
+            try:
+                resp = _http_get_json(url)
+                schemes = resp.get("data", []) if isinstance(resp, dict) else []
+                by_family = {}
+                for s in schemes:
+                    fid = s.get("family_id")
+                    if not fid:
+                        continue
+                    is_direct = s.get("plan_type") == "direct"
+                    is_growth = "Growth" in (s.get("name") or "") or "IDCW" not in (s.get("name") or "")
+                    priority = (1 if is_direct else 0) * 10 + (1 if is_growth else 0)
+                    existing = by_family.get(fid)
+                    if not existing or priority > existing["_priority"]:
+                        by_family[fid] = {
+                            "family_id": fid,
+                            "name": _strip_plan_suffix(s.get("name") or ""),
+                            "category": s.get("category"),
+                            "amc": s.get("amc_name"),
+                            "amfi_code": s.get("amfi_code"),
+                            "_priority": priority,
+                        }
+                live_results = []
+                for entry in by_family.values():
+                    entry.pop("_priority", None)
+                    live_results.append(entry)
+                with _lock:
+                    _search_cache[key] = {"data": live_results, "fetched_at": time.time()}
+                for r in live_results:
+                    clean_name = (r.get("name") or "").lower().strip()
+                    if clean_name not in results_by_name:
+                        results_by_name[clean_name] = r
+            except Exception:
+                _mark_upstream_down()
 
-    # 3) Try MFData.in live
-    url = f"{MFDATA_BASE}/search?q={urllib.parse.quote(q)}"
-    try:
-        resp = _http_get_json(url)
-    except Exception:
-        _mark_upstream_down()
-        if _stale_ok(cached, SEARCH_STALE_OK):
-            return jsonify(cached["data"])
-        return jsonify(_snapshot_search(q))
-
-    schemes = resp.get("data", []) if isinstance(resp, dict) else []
-
-    by_family = {}
-    for s in schemes:
-        fid = s.get("family_id")
-        if not fid:
-            continue
-        is_direct = s.get("plan_type") == "direct"
-        is_growth = "Growth" in (s.get("name") or "") or "IDCW" not in (s.get("name") or "")
-        priority = (1 if is_direct else 0) * 10 + (1 if is_growth else 0)
-        existing = by_family.get(fid)
-        if not existing or priority > existing["_priority"]:
-            by_family[fid] = {
-                "family_id": fid,
-                "name": _strip_plan_suffix(s.get("name") or ""),
-                "category": s.get("category"),
-                "amc": s.get("amc_name"),
-                "amfi_code": s.get("amfi_code"),
-                "_priority": priority,
-            }
-
-    result = []
-    for entry in by_family.values():
-        entry.pop("_priority", None)
-        result.append(entry)
-    result.sort(key=lambda x: x["name"].lower())
-
-    with _lock:
-        _search_cache[key] = {"data": result, "fetched_at": time.time()}
+    result = sorted(results_by_name.values(), key=lambda x: (x.get("name") or "").lower())
     return jsonify(result)
 
 
+# ============================================================
+# STATS — Snapshot is PRIMARY
+# ============================================================
+@app.route("/api/stats")
+def api_stats():
+    # Snapshot stats are always the base
+    stats = _snapshot_stats()
+
+    # Enrich with live data if available (non-blocking)
+    if not _upstream_is_down():
+        try:
+            resp = _http_get_json(f"{MFDATA_BASE}/stats")
+            live_data = resp.get("data", {})
+            if live_data.get("total_schemes", 0) > stats.get("total_schemes", 0):
+                stats["total_schemes_live"] = live_data["total_schemes"]
+            if live_data.get("latest_holdings_month"):
+                stats["latest_holdings_month"] = live_data["latest_holdings_month"]
+            stats["_live_available"] = True
+        except Exception:
+            _mark_upstream_down()
+            stats["_live_available"] = False
+
+    return jsonify(stats)
+
+
+# ============================================================
+# HOLDINGS — Snapshot for negative IDs, live for positive
+# ============================================================
 @app.route("/api/holdings/<int:family_id>")
 def api_holdings(family_id):
-    # Snapshot entries use negative family_ids — serve directly from bundle
+    # Snapshot entries (negative IDs) — serve directly
     if family_id < 0:
         if family_id in SNAPSHOT_SCHEMES:
             return jsonify(_snapshot_holdings_payload(family_id))
-        # Maybe it's a snapshot ID we seeded into Supabase
         if SUPABASE_ENABLED:
             try:
                 data = supabase_get_holdings(family_id)
@@ -430,12 +411,12 @@ def api_holdings(family_id):
                 print(f"[supabase] holdings failed for {family_id}: {e}")
         return jsonify({"error": "Unknown snapshot fund"}), 404
 
+    # Positive IDs — try cache, Supabase, then MFData.in
     with _lock:
         cached = _holdings_cache.get(family_id)
         if _fresh(cached, HOLDINGS_TTL):
             return jsonify(cached["data"])
 
-    # 1) Try Supabase first (persistent cache, always fast)
     if SUPABASE_ENABLED:
         try:
             data = supabase_get_holdings(family_id)
@@ -446,7 +427,6 @@ def api_holdings(family_id):
         except Exception as e:
             print(f"[supabase] holdings failed for {family_id}: {e}")
 
-    # 2) Circuit breaker — don't hang the user if we know upstream is down
     if _upstream_is_down():
         if _stale_ok(cached, HOLDINGS_STALE_OK):
             return jsonify(cached["data"])
@@ -487,11 +467,11 @@ def api_refresh():
         _search_cache.clear()
         _stats_cache["data"] = None
         _stats_cache["fetched_at"] = 0
-    _upstream_outage_until = 0  # reset circuit breaker — try upstream again
+    _upstream_outage_until = 0
     return jsonify({"status": "refreshed"})
 
 
-# ---------- Admin endpoints (token-protected) ----------
+# ---------- Admin endpoints ----------
 def _require_admin():
     if not ADMIN_TOKEN:
         return jsonify({"error": "ADMIN_TOKEN env var not set"}), 503
@@ -517,7 +497,6 @@ def admin_status():
 
 @app.route("/api/admin/seed-snapshot", methods=["GET", "POST"])
 def admin_seed_snapshot():
-    """Populate Supabase with the bundled snapshot funds."""
     err = _require_admin()
     if err:
         return err
@@ -557,11 +536,6 @@ def admin_seed_snapshot():
 
 @app.route("/api/admin/seed-holdings-batch", methods=["GET", "POST"])
 def admin_seed_holdings_batch():
-    """
-    Fetch holdings for a batch of funds that don't have any in Supabase yet.
-    Call this repeatedly until it reports 0 funds remaining.
-    Query params: ?batch_size=50  (default 50, max 100)
-    """
     err = _require_admin()
     if err:
         return err
@@ -570,11 +544,10 @@ def admin_seed_holdings_batch():
 
     batch_size = min(int(request.args.get("batch_size", "50")), 100)
 
-    # Find schemes with no holdings yet
     try:
         all_schemes = _supabase_request("GET", "schemes", params={
             "select": "family_id",
-            "family_id": "gt.0",  # skip negative snapshot IDs
+            "family_id": "gt.0",
             "limit": "10000",
         }) or []
         existing_holdings = _supabase_request("GET", "holdings", params={
@@ -621,7 +594,7 @@ def admin_seed_holdings_batch():
             if rows:
                 supabase_upsert("holdings", rows)
                 seeded += 1
-            time.sleep(2.2)  # rate limit politeness
+            time.sleep(2.2)
         except Exception:
             errors += 1
 
@@ -638,13 +611,6 @@ def admin_seed_holdings_batch():
 
 @app.route("/api/admin/seed-from-mfdata", methods=["GET", "POST"])
 def admin_seed_from_mfdata():
-    """
-    Seed Supabase with live MFData.in data. Use when MFData.in is back online.
-    Query params:
-      ?categories=Flexi+Cap,Large+Cap   (comma-sep, default: equity + hybrid)
-      ?max_per_category=200             (default: 200)
-      ?fetch_holdings=1                 (default: 1)
-    """
     err = _require_admin()
     if err:
         return err
@@ -663,8 +629,6 @@ def admin_seed_from_mfdata():
             "Balanced Advantage Fund", "Equity Savings",
         ]
     max_per_cat = int(request.args.get("max_per_category", "200"))
-    # Default: fetch only scheme metadata (fast). Holdings is opt-in
-    # because it can take 30+ minutes for thousands of funds.
     fetch_holdings = request.args.get("fetch_holdings", "0") == "1"
 
     families = {}
@@ -675,8 +639,6 @@ def admin_seed_from_mfdata():
                 f"{MFDATA_BASE}/schemes?category={urllib.parse.quote(cat)}"
                 f"&plan_type=direct&limit={max_per_cat}"
             )
-            # Long timeout for seed — MFData.in can be slow when fetching
-            # large category listings, but we'd rather wait than retry.
             resp = _http_get_json(url, timeout=45, retries=2)
             for s in resp.get("data", []):
                 fid = s.get("family_id")
@@ -690,14 +652,14 @@ def admin_seed_from_mfdata():
                     "amfi_code": s.get("amfi_code"),
                 }
             fetched_log.append({"category": cat, "running_total": len(families)})
-            time.sleep(2.0)  # polite delay between category fetches
+            time.sleep(2.0)
         except Exception as e:
             fetched_log.append({"category": cat, "error": str(e)})
 
     if not families:
         return jsonify({
             "status": "no_data",
-            "error": "MFData.in returned no schemes — it may still be down",
+            "error": "MFData.in returned no schemes",
             "log": fetched_log,
         }), 502
 
@@ -729,7 +691,6 @@ def admin_seed_from_mfdata():
                 if rows:
                     supabase_upsert("holdings", rows)
                     holdings_seeded += len(rows)
-                # Polite delay — MFData.in rate-limits at 30/min
                 time.sleep(2.5)
             except Exception:
                 holdings_errors += 1
@@ -752,7 +713,8 @@ if __name__ == "__main__":
     print("=" * 60)
     print("  MF Overlap App — backend running")
     print("=" * 60)
-    print(f"  Data source : mfdata.in")
+    print(f"  Snapshot funds : {len(SNAPSHOT_SCHEMES)} (primary)")
+    print(f"  Live source    : mfdata.in (supplementary)")
     if is_local:
         print(f"  Open in browser: http://localhost:{port}")
         print(f"  To stop: press Ctrl+C in this window")
