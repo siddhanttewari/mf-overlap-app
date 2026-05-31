@@ -65,14 +65,17 @@ def fetch_amfi_schemes():
             continue
 
         parts = line.split(";")
-        if len(parts) < 6:
+        if len(parts) < 5:
             continue
 
         scheme_code = parts[0].strip()
-        scheme_name = parts[1].strip() if len(parts) > 1 else ""
+        scheme_name = parts[3].strip() if len(parts) > 3 else ""
 
         # Only Direct Growth plans
-        if "Direct" not in scheme_name or "Growth" not in scheme_name:
+        name_lower_check = scheme_name.lower()
+        if "direct" not in name_lower_check:
+            continue
+        if "growth" not in name_lower_check and "idcw" in name_lower_check:
             continue
 
         # Try to detect category (AMFI doesn't label categories in this file,
