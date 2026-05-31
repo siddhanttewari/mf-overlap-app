@@ -2,7 +2,7 @@ name: Monthly Holdings Update
 
 on:
   schedule:
-    - cron: '30 3 10 * *'  # 10th of month, 9AM IST
+    - cron: '30 3 10 * *'
   workflow_dispatch:
     inputs:
       snapshot_only:
@@ -13,6 +13,10 @@ on:
         options:
           - 'false'
           - 'true'
+      max_funds:
+        description: 'Max funds to scrape (default 300)'
+        required: false
+        default: '300'
 
 permissions:
   contents: write
@@ -20,7 +24,8 @@ permissions:
 jobs:
   scrape-and-seed:
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 30
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,15 +38,16 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4 lxml
 
-      - name: Run scraper
+      - name: Run Groww scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
+          MAX="${{ github.event.inputs.max_funds || '300' }}"
           if [ "${{ github.event.inputs.snapshot_only }}" = "true" ]; then
-            python scrape_and_seed.py --snapshot-only --output snapshot.py
+            python scrape_groww.py --snapshot-only --max-funds "$MAX" --output snapshot.py
           else
-            python scrape_and_seed.py --output snapshot.py
+            python scrape_groww.py --max-funds "$MAX" --output snapshot.py
           fi
 
       - name: Verify snapshot
@@ -50,30 +56,22 @@ jobs:
           from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
           n = len(SNAPSHOT_SCHEMES)
           print(f'Snapshot: {n} funds, date: {SNAPSHOT_DATE}')
-          if n < 10:
-              print('WARNING: Very few funds scraped')
-          cats = {}
-          amcs = set()
+          cats = {}; amcs = set()
           for s in SNAPSHOT_SCHEMES.values():
               cats.setdefault(s.get('category','?'), []).append(s['name'])
               amcs.add(s.get('amc','?'))
           for cat, names in sorted(cats.items()):
               print(f'  {cat}: {len(names)}')
-          print(f'AMCs: {len(amcs)}')
-          print(f'Total: {n} funds')
+          print(f'AMCs: {len(amcs)} | Total: {n} funds')
           "
 
-      - name: Check for changes
-        id: changes
+      - name: Commit if changed
         run: |
-          git diff --quiet snapshot.py && echo "changed=false" >> $GITHUB_OUTPUT || echo "changed=true" >> $GITHUB_OUTPUT
-
-      - name: Commit and push
-        if: steps.changes.outputs.changed == 'true'
-        run: |
+          git diff --quiet snapshot.py && echo "No changes" && exit 0
           git config user.name "MF Scraper Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          git pull --rebase origin main
           MONTH=$(date +"%B %Y")
           git add snapshot.py
-          git commit -m "chore: update holdings from Moneycontrol — ${MONTH}"
+          git commit -m "chore: update holdings from Groww.in — ${MONTH}"
           git push
