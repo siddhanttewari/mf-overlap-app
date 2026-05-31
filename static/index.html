@@ -140,6 +140,20 @@
 <!-- ================================ APP ================================ -->
 <main class="max-w-6xl mx-auto px-5 sm:px-6 pb-16">
 
+  <!-- Tab navigation -->
+  <nav id="tabNav" class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 mb-6 shadow-sm sm:inline-flex">
+    <button data-view="analyzer" class="tab-btn flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition">
+      Overlap analyzer
+    </button>
+    <button data-view="portfolio" class="tab-btn flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5">
+      My Portfolio
+      <span id="watchCount" class="hidden text-xs bg-indigo-100 text-indigo-700 rounded-full px-1.5 py-0.5 font-bold leading-none">0</span>
+    </button>
+  </nav>
+
+  <!-- ===================== VIEW: ANALYZER ===================== -->
+  <div id="view-analyzer">
+
   <section id="errorState" class="hidden card p-5 mb-5 border-red-200 bg-red-50">
     <div class="flex items-start gap-3">
       <div class="bg-red-100 rounded-lg p-2 shrink-0">
@@ -256,6 +270,23 @@
     </div>
 
   </section>
+
+  </div><!-- /view-analyzer -->
+
+  <!-- ===================== VIEW: MY PORTFOLIO ===================== -->
+  <div id="view-portfolio" class="hidden">
+    <section class="card p-6 sm:p-7 reveal">
+      <div class="flex items-start justify-between flex-wrap gap-3">
+        <div>
+          <h2 class="text-lg sm:text-xl font-bold text-slate-900">My Portfolio</h2>
+          <p class="text-slate-500 text-sm mt-0.5">Funds you're tracking. Saved in this browser — no signup, no account.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap" id="watchlistActions"></div>
+      </div>
+      <div id="shareMsg" class="hidden mt-3 text-sm rounded-lg px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800"></div>
+      <div id="watchlistContent" class="mt-5"></div>
+    </section>
+  </div><!-- /view-portfolio -->
 
   <!-- Footer / disclosures -->
   <footer class="mt-14 pt-7 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
@@ -409,9 +440,12 @@ function renderDropdown(items) {
           <div class="font-medium text-slate-900 truncate text-sm">${escapeHtml(s.name)}</div>
           <div class="text-xs text-slate-500 truncate mt-0.5">${escapeHtml(s.amc || '')}${s.category ? ' · ' + escapeHtml(s.category) : ''}</div>
         </div>
-        <span class="text-indigo-600 text-xs font-semibold shrink-0 flex items-center gap-1">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-          Add
+        <span class="shrink-0 flex items-center gap-1.5">
+          ${starButton(s)}
+          <span class="text-indigo-600 text-xs font-semibold flex items-center gap-1">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
+            Add
+          </span>
         </span>
       </div>
     </div>`).join('') + (items.length > 50 ? `<div class="px-4 py-2 text-xs text-slate-400 bg-slate-50">Showing first 50 of ${items.length}. Refine to see more.</div>` : '');
@@ -498,7 +532,8 @@ function renderSelected() {
     const s = SCHEMES[key];
     if (!s) return '';
     return `
-      <div class="scheme-chip flex items-center gap-2 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 text-indigo-900 pl-3 pr-2 py-1.5 rounded-full text-sm font-medium">
+      <div class="scheme-chip flex items-center gap-1.5 bg-gradient-to-r from-indigo-50 to-violet-50 border border-indigo-200 text-indigo-900 pl-3 pr-2 py-1.5 rounded-full text-sm font-medium">
+        ${starButton(s)}
         <span>${escapeHtml(s.name)}</span>
         <button class="remove-chip text-indigo-400 hover:text-indigo-700 hover:bg-white rounded-full w-5 h-5 flex items-center justify-center text-lg leading-none" data-key="${key}" title="Remove">×</button>
       </div>`;
@@ -717,9 +752,10 @@ function renderUniqueness(matrix, schemes) {
     html += `
       <div>
         <div class="flex items-center justify-between text-sm mb-1.5 gap-2 flex-wrap">
-          <div class="min-w-0 flex-1">
+          <div class="min-w-0 flex-1 flex items-center gap-1.5">
+            ${starButton(r.scheme)}
             <span class="font-semibold text-slate-900">${escapeHtml(r.scheme.name)}</span>
-            ${r.scheme.category ? `<span class="text-xs text-slate-500 ml-2">${escapeHtml(r.scheme.category)}</span>` : ''}
+            ${r.scheme.category ? `<span class="text-xs text-slate-500 ml-1">${escapeHtml(r.scheme.category)}</span>` : ''}
           </div>
           <div class="text-right">
             <span class="font-bold text-slate-900">${r.unique.toFixed(0)}%</span>
@@ -839,7 +875,273 @@ sampleBtn.addEventListener('click', async () => {
   }
 });
 
+// =====================================================================
+// MY PORTFOLIO — watchlist (localStorage, no backend)
+// =====================================================================
+const WATCH_KEY = 'fundlens.watchlist.v1';
+let watchlist = [];   // [{family_id, name, amc, category}]
+
+function loadWatchlist() {
+  try {
+    const raw = localStorage.getItem(WATCH_KEY);
+    watchlist = raw ? JSON.parse(raw) : [];
+    if (!Array.isArray(watchlist)) watchlist = [];
+  } catch { watchlist = []; }
+  // normalise ids to strings
+  watchlist = watchlist
+    .filter(f => f && f.family_id != null && f.name)
+    .map(f => ({ family_id: String(f.family_id), name: f.name, amc: f.amc || '', category: f.category || '' }));
+}
+
+function saveWatchlist() {
+  try { localStorage.setItem(WATCH_KEY, JSON.stringify(watchlist)); } catch (e) { console.warn('watchlist save failed', e); }
+}
+
+function isWatched(fid) { return watchlist.some(f => f.family_id === String(fid)); }
+
+function toggleWatch(fund) {
+  const fid = String(fund.family_id);
+  const i = watchlist.findIndex(f => f.family_id === fid);
+  if (i >= 0) watchlist.splice(i, 1);
+  else watchlist.push({ family_id: fid, name: fund.name, amc: fund.amc || '', category: fund.category || '' });
+  saveWatchlist();
+}
+
+function removeWatch(fid) {
+  const i = watchlist.findIndex(f => f.family_id === String(fid));
+  if (i >= 0) { watchlist.splice(i, 1); saveWatchlist(); }
+  refreshStars(); renderPortfolio(); updateWatchBadge();
+}
+
+// ---- star button + sync ----
+function starSvg(filled) {
+  return `<svg viewBox="0 0 24 24" class="w-4 h-4 pointer-events-none" fill="${filled ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.5a.56.56 0 011.04 0l2.12 5.11a.56.56 0 00.48.35l5.52.44c.5.04.7.66.32.99l-4.2 3.6a.56.56 0 00-.18.56l1.28 5.38a.56.56 0 01-.84.61l-4.72-2.88a.56.56 0 00-.59 0l-4.72 2.88a.56.56 0 01-.84-.61l1.28-5.38a.56.56 0 00-.18-.56l-4.2-3.6a.56.56 0 01.32-.99l5.52-.44a.56.56 0 00.48-.35z"/></svg>`;
+}
+
+function starButton(fund) {
+  const f = isWatched(fund.family_id);
+  return `<button type="button" class="watch-star inline-flex items-center justify-center rounded-lg p-1 transition ${f ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}"
+    data-fid="${escapeHtml(String(fund.family_id))}" data-name="${escapeHtml(fund.name)}" data-amc="${escapeHtml(fund.amc || '')}" data-category="${escapeHtml(fund.category || '')}"
+    title="${f ? 'Remove from My Portfolio' : 'Add to My Portfolio'}" aria-label="${f ? 'Remove from My Portfolio' : 'Add to My Portfolio'}">${starSvg(f)}</button>`;
+}
+
+function refreshStars() {
+  document.querySelectorAll('.watch-star').forEach(btn => {
+    const f = isWatched(btn.dataset.fid);
+    btn.classList.toggle('text-amber-400', f);
+    btn.classList.toggle('text-slate-300', !f);
+    btn.classList.toggle('hover:text-amber-400', !f);
+    btn.title = f ? 'Remove from My Portfolio' : 'Add to My Portfolio';
+    btn.innerHTML = starSvg(f);
+  });
+}
+
+// Delegated handler (capture phase so it beats the dropdown "add" click)
+document.addEventListener('click', (e) => {
+  const star = e.target.closest('.watch-star');
+  if (!star) return;
+  e.preventDefault();
+  e.stopPropagation();
+  toggleWatch({
+    family_id: star.dataset.fid,
+    name: star.dataset.name,
+    amc: star.dataset.amc,
+    category: star.dataset.category,
+  });
+  refreshStars();
+  renderPortfolio();
+  updateWatchBadge();
+}, true);
+
+function updateWatchBadge() {
+  const badge = document.getElementById('watchCount');
+  if (!badge) return;
+  badge.textContent = watchlist.length;
+  badge.classList.toggle('hidden', watchlist.length === 0);
+}
+
+// ---- tab switching ----
+function switchView(name) {
+  document.querySelectorAll('.tab-btn').forEach(b => {
+    const active = b.dataset.view === name;
+    b.classList.toggle('btn-primary', active);
+    b.classList.toggle('text-white', active);
+    b.classList.toggle('text-slate-600', !active);
+    b.classList.toggle('hover:bg-slate-100', !active);
+  });
+  document.getElementById('view-analyzer').classList.toggle('hidden', name !== 'analyzer');
+  document.getElementById('view-portfolio').classList.toggle('hidden', name !== 'portfolio');
+  if (name === 'portfolio') renderPortfolio();
+}
+document.getElementById('tabNav').addEventListener('click', (e) => {
+  const btn = e.target.closest('.tab-btn');
+  if (btn) switchView(btn.dataset.view);
+});
+
+// ---- add a watched fund into the comparison ----
+function addWatchedToComparison(fid) {
+  const fund = watchlist.find(f => f.family_id === String(fid));
+  if (!fund) return;
+  if (selected.has(fund.family_id)) { switchView('analyzer'); return; }
+  if (selected.size >= MAX_SCHEMES) { alert(`You can compare up to ${MAX_SCHEMES} funds at once.`); return; }
+  SCHEMES[fund.family_id] = { family_id: fund.family_id, name: fund.name, amc: fund.amc, category: fund.category };
+  selected.add(fund.family_id);
+  renderSelected();
+  ensureHoldings(fund.family_id).catch(() => {});
+  switchView('analyzer');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function compareAllWatched() {
+  if (watchlist.length < 2) { alert('Watch at least 2 funds to compare them.'); return; }
+  selected.clear();
+  Object.keys(SCHEMES).forEach(k => { if (!watchlist.some(f => f.family_id === k)) delete SCHEMES[k]; });
+  watchlist.slice(0, MAX_SCHEMES).forEach(f => {
+    SCHEMES[f.family_id] = { family_id: f.family_id, name: f.name, amc: f.amc, category: f.category };
+    selected.add(f.family_id);
+  });
+  renderSelected();
+  switchView('analyzer');
+  runAnalysis();
+}
+
+// ---- render the portfolio dashboard ----
+function renderPortfolio() {
+  const wrap = document.getElementById('watchlistContent');
+  const actions = document.getElementById('watchlistActions');
+  if (!wrap) return;
+
+  if (watchlist.length === 0) {
+    actions.innerHTML = '';
+    wrap.innerHTML = `
+      <div class="text-center py-12 px-6">
+        <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-amber-50 text-amber-400 mb-4">${starSvg(true)}</div>
+        <h3 class="font-semibold text-slate-900">No funds tracked yet</h3>
+        <p class="text-sm text-slate-500 mt-1 max-w-md mx-auto">Tap the ★ on any fund in search results or in an overlap analysis to add it here. Your watchlist stays on this device.</p>
+        <button onclick="switchView('analyzer')" class="mt-5 px-4 py-2 text-sm font-semibold text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-50">Find funds to track</button>
+      </div>`;
+    return;
+  }
+
+  actions.innerHTML = `
+    ${watchlist.length >= 2 ? `<button onclick="compareAllWatched()" class="px-3 py-1.5 text-sm font-medium btn-primary text-white rounded-lg">Compare all (${Math.min(watchlist.length, MAX_SCHEMES)})</button>` : ''}
+    <button onclick="shareWatchlist()" class="px-3 py-1.5 text-sm text-indigo-700 border border-indigo-200 rounded-lg hover:bg-indigo-50 font-medium">Share</button>
+    <button onclick="clearWatchlist()" class="px-3 py-1.5 text-sm text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-100 font-medium">Clear all</button>`;
+
+  wrap.innerHTML = `<div class="grid sm:grid-cols-2 gap-4">` + watchlist.map(f => `
+    <div class="card card-hover p-5 flex flex-col" data-fid="${escapeHtml(f.family_id)}">
+      <div class="flex items-start justify-between gap-2">
+        <div class="min-w-0">
+          <h3 class="font-semibold text-slate-900 text-sm leading-snug">${escapeHtml(f.name)}</h3>
+          <p class="text-xs text-slate-500 mt-0.5 truncate">${escapeHtml(f.amc || '—')}${f.category ? ' · ' + escapeHtml(f.category) : ''}</p>
+        </div>
+        <button onclick="removeWatch('${escapeHtml(f.family_id)}')" class="shrink-0 text-slate-300 hover:text-red-500 transition rounded-lg p-1" title="Remove">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="mt-3 flex items-center gap-2 text-[11px]">
+        <span class="meta-month inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded-full px-2 py-0.5">Loading…</span>
+        <span class="meta-count inline-flex items-center gap-1 bg-slate-100 text-slate-600 rounded-full px-2 py-0.5"></span>
+      </div>
+      <div class="holdings-preview mt-3 space-y-1.5 text-xs text-slate-400">Loading top holdings…</div>
+      <div class="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+        <button onclick="addWatchedToComparison('${escapeHtml(f.family_id)}')" class="text-xs font-semibold text-indigo-700 hover:text-indigo-900">+ Add to comparison</button>
+      </div>
+    </div>`).join('') + `</div>`;
+
+  // Hydrate each card with holdings (lazy, parallel)
+  watchlist.forEach(f => hydratePortfolioCard(f.family_id));
+}
+
+async function hydratePortfolioCard(fid) {
+  const card = document.querySelector(`#watchlistContent [data-fid="${CSS.escape(String(fid))}"]`);
+  if (!card) return;
+  const monthEl = card.querySelector('.meta-month');
+  const countEl = card.querySelector('.meta-count');
+  const prev = card.querySelector('.holdings-preview');
+  try {
+    const holdings = await ensureHoldings(fid);
+    const meta = HOLDINGS_META[fid] || {};
+    const entries = Object.entries(holdings).sort((a, b) => b[1] - a[1]);
+    monthEl.textContent = meta.month ? '📅 ' + meta.month : '📅 latest';
+    countEl.textContent = `${entries.length} holdings`;
+    const max = entries.length ? entries[0][1] : 1;
+    const top = entries.slice(0, 5);
+    prev.innerHTML = top.length ? top.map(([stock, w]) => `
+      <div class="flex items-center gap-2">
+        <span class="w-28 sm:w-32 truncate text-slate-600">${escapeHtml(shortName(stock, 3))}</span>
+        <span class="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden"><span class="block h-1.5 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width:${Math.max(4, (w / max) * 100)}%"></span></span>
+        <span class="w-10 text-right tabular-nums text-slate-500">${w.toFixed(1)}%</span>
+      </div>`).join('') : '<span class="text-slate-400">No equity holdings on record.</span>';
+  } catch (e) {
+    monthEl.textContent = '📅 —';
+    countEl.textContent = '';
+    prev.innerHTML = `<span class="text-slate-400">Holdings unavailable right now.</span>`;
+  }
+}
+
+function clearWatchlist() {
+  if (!confirm('Remove all funds from My Portfolio?')) return;
+  watchlist = [];
+  saveWatchlist();
+  refreshStars(); renderPortfolio(); updateWatchBadge();
+}
+
+// ---- share via URL (frontend-only, encodes minimal metadata) ----
+function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+function b64decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+function shareWatchlist() {
+  const msg = document.getElementById('shareMsg');
+  if (watchlist.length === 0) return;
+  const compact = watchlist.map(f => [f.family_id, f.name, f.amc, f.category]);
+  const payload = encodeURIComponent(b64encode(JSON.stringify(compact)));
+  const url = `${location.origin}${location.pathname}?p=${payload}`;
+  const show = (text, ok = true) => {
+    msg.textContent = text;
+    msg.classList.remove('hidden', 'bg-emerald-50', 'border-emerald-200', 'text-emerald-800', 'bg-amber-50', 'border-amber-200', 'text-amber-800');
+    msg.classList.add(ok ? 'bg-emerald-50' : 'bg-amber-50', ok ? 'border-emerald-200' : 'border-amber-200', ok ? 'text-emerald-800' : 'text-amber-800');
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(() => show('✓ Shareable link copied to clipboard — anyone who opens it gets this watchlist.'))
+      .catch(() => show('Copy this link: ' + url, false));
+  } else {
+    show('Copy this link: ' + url, false);
+  }
+}
+
+function importWatchlistFromUrl() {
+  const params = new URLSearchParams(location.search);
+  const p = params.get('p');
+  if (!p) return;
+  try {
+    const compact = JSON.parse(b64decode(p));
+    if (!Array.isArray(compact)) return;
+    let added = 0;
+    compact.forEach(row => {
+      const [family_id, name, amc, category] = row;
+      if (family_id == null || !name) return;
+      if (!isWatched(family_id)) { watchlist.push({ family_id: String(family_id), name, amc: amc || '', category: category || '' }); added++; }
+    });
+    if (added > 0) saveWatchlist();
+    // Clean the URL so a refresh doesn't re-prompt, but the shared link still works on first open
+    history.replaceState(null, '', location.pathname);
+    if (added > 0) switchView('portfolio');
+  } catch (e) {
+    console.warn('watchlist import failed', e);
+  }
+}
+
+function initWatchlist() {
+  loadWatchlist();
+  importWatchlistFromUrl();
+  updateWatchBadge();
+  switchView('analyzer');
+}
+
 initApp();
+initWatchlist();
 </script>
 </body>
 </html>
