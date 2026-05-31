@@ -24,7 +24,7 @@ permissions:
 jobs:
   scrape-and-seed:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -38,16 +38,16 @@ jobs:
       - name: Install dependencies
         run: pip install requests beautifulsoup4 lxml
 
-      - name: Run Groww scraper
+      - name: Run Groww scraper v2
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
         run: |
           MAX="${{ github.event.inputs.max_funds || '300' }}"
           if [ "${{ github.event.inputs.snapshot_only }}" = "true" ]; then
-            python scrape_groww.py --snapshot-only --max-funds "$MAX" --output snapshot.py
+            python scrape_groww_v2.py --snapshot-only --max-funds "$MAX" --output snapshot.py
           else
-            python scrape_groww.py --max-funds "$MAX" --output snapshot.py
+            python scrape_groww_v2.py --max-funds "$MAX" --output snapshot.py
           fi
 
       - name: Verify snapshot
@@ -56,6 +56,8 @@ jobs:
           from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
           n = len(SNAPSHOT_SCHEMES)
           print(f'Snapshot: {n} funds, date: {SNAPSHOT_DATE}')
+          if n < 10:
+              print('WARNING: Very few funds')
           cats = {}; amcs = set()
           for s in SNAPSHOT_SCHEMES.values():
               cats.setdefault(s.get('category','?'), []).append(s['name'])
@@ -67,11 +69,12 @@ jobs:
 
       - name: Commit if changed
         run: |
-          git diff --quiet snapshot.py && echo "No changes" && exit 0
+          git diff --quiet snapshot.py groww_urls.json 2>/dev/null && echo "No changes" && exit 0
           git config user.name "MF Scraper Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           MONTH=$(date +"%B %Y")
           git add snapshot.py
+          git add groww_urls.json 2>/dev/null || true
           git commit -m "chore: update holdings from Groww.in — ${MONTH}"
           git pull --rebase origin main
           git push
