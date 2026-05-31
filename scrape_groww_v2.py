@@ -91,58 +91,71 @@ def save_url_cache(cache):
         json.dump(cache, f, indent=2)
 
 def clean_fund_name(name):
-    """Strip plan/option suffixes for slug generation."""
-    for suffix in [" - Direct Plan - Growth", " - Direct Plan-Growth",
-                   " - Direct - Growth", " -Direct Plan-Growth",
-                   " - Direct Plan", " Direct Plan Growth",
-                   " Direct Plan - Growth", " Direct-Growth",
-                   " - Growth", " -Growth", " Direct Growth",
-                   " Fund - Direct", " - Direct"]:
-        if name.endswith(suffix):
-            name = name[:-len(suffix)].strip()
-    # Also remove "Fund" at end
-    if name.endswith(" Fund"):
+    """Strip plan/option suffixes for slug generation. Case-insensitive."""
+    name = re.sub(r'\s+', ' ', name.strip())
+    suffixes = [
+        " - Direct Plan - Growth Option", " - Direct Plan-Growth Option",
+        " - Direct Plan - Growth", " - Direct Plan-Growth",
+        " - Direct - Growth Option", " - Direct - Growth",
+        " -Direct Plan-Growth", " - Direct Plan",
+        " Direct Plan Growth Option", " Direct Plan - Growth Option",
+        " Direct Plan Growth", " Direct Plan - Growth",
+        " Direct-Growth", " Direct Growth",
+        " - Growth Option", " -Growth Option",
+        " - Growth", " -Growth", " Growth Option",
+        " Fund - Direct", " - Direct", " Direct",
+        # Hyphenated formats (no spaces)
+        "-Direct Plan-Growth", "-Direct-Plan-Growth",
+        "-Direct Plan Growth", "-Direct-Growth",
+    ]
+    nl = name.lower()
+    for suffix in suffixes:
+        if nl.endswith(suffix.lower()):
+            name = name[:len(name)-len(suffix)].strip()
+            break
+    # Also try regex for remaining weird formats
+    name = re.sub(r'[\s-]*(Direct|Growth|Option|Plan)[\s-]*(Direct|Growth|Option|Plan)?[\s-]*(Direct|Growth|Option|Plan)?$', '', name, flags=re.IGNORECASE).strip()
+    if name.lower().endswith(" fund"):
         name = name[:-5].strip()
+    # Clean trailing hyphens/dashes
+    name = name.strip(' -–—')
     return name
 
 def generate_slug_variants(name):
-    """Generate multiple possible Groww URL slugs for a fund name."""
+    """Generate many possible Groww URL slugs for a fund name."""
     clean = clean_fund_name(name)
-    
-    # Base slug
     def slugify(s):
-        s = s.lower().replace("&", "and").replace("'", "").replace("'", "")
+        s = s.lower().replace("&", "and").replace("'", "").replace("\u2019", "")
         s = re.sub(r'[^a-z0-9\s-]', '', s)
         s = re.sub(r'\s+', '-', s.strip())
         return re.sub(r'-+', '-', s)
-    
     base = slugify(clean)
-    
-    # Generate variants
+    base_nf = re.sub(r'-?fund-?', '-', base).strip('-')
+    base_nf = re.sub(r'-+', '-', base_nf)
     variants = [
+        f"{base}-direct-growth",
         f"{base}-fund-direct-growth",
-        f"{base}-direct-growth",  
-        f"{base}-fund-direct-plan-growth",
+        f"{base_nf}-fund-direct-growth",
+        f"{base_nf}-direct-growth",
         f"{base}-direct-plan-growth",
-        f"{base}-direct-plan",
-        f"{base}-growth-direct-plan",
+        f"{base}-fund-direct-plan-growth",
+        f"{base_nf}-fund-direct-plan-growth",
+        f"{base_nf}-direct-plan-growth",
     ]
-    
-    # Also try without common words
-    for word in ["mutual", "scheme"]:
-        if word in base:
-            alt = base.replace(f"-{word}", "").replace(f"{word}-", "")
-            variants.append(f"{alt}-direct-growth")
-            variants.append(f"{alt}-fund-direct-growth")
-    
-    # Deduplicate while preserving order
+    for word in ["mutual", "scheme", "plan", "option", "regular"]:
+        if f"-{word}" in base_nf:
+            alt = re.sub(rf'-?{word}-?', '-', base_nf).strip('-')
+            alt = re.sub(r'-+', '-', alt)
+            if alt:
+                variants.append(f"{alt}-fund-direct-growth")
+                variants.append(f"{alt}-direct-growth")
     seen = set()
     unique = []
     for v in variants:
-        if v not in seen:
+        v = re.sub(r'-+', '-', v).strip('-')
+        if v and v not in seen:
             seen.add(v)
             unique.append(v)
-    
     return unique
 
 def discover_groww_url(fund_name):
