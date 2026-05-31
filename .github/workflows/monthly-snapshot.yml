@@ -70,8 +70,8 @@ jobs:
           git diff --quiet snapshot.py && echo "No changes" && exit 0
           git config user.name "MF Scraper Bot"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git pull --rebase origin main
           MONTH=$(date +"%B %Y")
           git add snapshot.py
           git commit -m "chore: update holdings from Groww.in — ${MONTH}"
+          git pull --rebase origin main
           git push
