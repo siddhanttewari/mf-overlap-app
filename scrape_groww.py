@@ -361,7 +361,26 @@ def main():
             print(f"  {f['name']} ({f['amc']}) — {len(f['holdings'])} stocks")
         return
 
-    # 3. Write snapshot
+    # 3. Safety check — don't overwrite a bigger snapshot with a smaller one
+    existing_count = 0
+    if os.path.exists(args.output):
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location("existing", args.output)
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            existing_count = len(getattr(mod, 'SNAPSHOT_SCHEMES', {}))
+            print(f"\nExisting snapshot has {existing_count} funds, new scrape has {len(all_funds)} funds")
+        except Exception:
+            pass
+
+    if existing_count > 0 and len(all_funds) < existing_count * 0.5:
+        print(f"\n⚠️ SAFETY: New scrape ({len(all_funds)} funds) is less than 50% of existing ({existing_count} funds).")
+        print("   Refusing to overwrite — the scraper likely had slug matching issues.")
+        print("   Existing snapshot.py is preserved. Supabase NOT updated.")
+        sys.exit(0)
+
+    # 4. Write snapshot
     write_snapshot(all_funds, args.output)
 
     # 4. Seed Supabase
