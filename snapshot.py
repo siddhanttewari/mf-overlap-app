@@ -2654,7 +2654,7 @@ SNAPSHOT_SCHEMES = {
     },
     -120: {
         "family_id": -120, "name": "Bandhan Conservative Hybrid",
-        "category": "Mid Cap", "amc": "Bandhan Mutual Fund",
+        "category": "Large & Mid Cap", "amc": "Bandhan Mutual Fund",
         "month": SNAPSHOT_DATE,
         "holdings": {
             "10 years": 39.51,
