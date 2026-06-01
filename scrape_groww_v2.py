@@ -430,33 +430,68 @@ def main():
         print("ERROR: No funds scraped. Keeping existing snapshot.")
         sys.exit(0)
 
-    # Safety check — don't overwrite bigger snapshot
-    existing_count = 0
+    # ── MERGE with existing snapshot (never lose curated funds) ──
+    existing_funds = {}
     if os.path.exists(args.output):
         try:
             import importlib.util
             spec = importlib.util.spec_from_file_location("ex", args.output)
             mod = importlib.util.module_from_spec(spec); spec.loader.exec_module(mod)
-            existing_count = len(getattr(mod, 'SNAPSHOT_SCHEMES', {}))
-        except Exception:
-            pass
-    
-    if existing_count > 0 and len(all_funds) < existing_count * 0.5:
-        print(f"\n⚠️ SAFETY: New scrape ({len(all_funds)}) < 50% of existing ({existing_count}). Refusing to overwrite.")
-        sys.exit(0)
+            for fid, s in getattr(mod, 'SNAPSHOT_SCHEMES', {}).items():
+                existing_funds[s["name"].lower().strip()] = {
+                    "name": s["name"], "amc": s.get("amc",""),
+                    "category": s.get("category",""), "holdings": [
+                        {"stock_name": k, "weight_pct": v} for k, v in s.get("holdings", {}).items()
+                    ],
+                }
+            print(f"\nExisting snapshot: {len(existing_funds)} funds")
+        except Exception as e:
+            print(f"\nCould not load existing snapshot: {e}")
 
-    # Write snapshot
-    write_snapshot(all_funds, args.output)
+    # Match scraped funds to existing ones and update holdings
+    updated = 0
+    added = 0
+    for fund in all_funds:
+        key = fund["name"].lower().strip()
+        # Try exact match first, then fuzzy
+        matched_key = None
+        if key in existing_funds:
+            matched_key = key
+        else:
+            # Try partial matching (first 3 words)
+            fund_words = key.split()[:3]
+            for ek in existing_funds:
+                ek_words = ek.split()[:3]
+                if fund_words == ek_words:
+                    matched_key = ek
+                    break
+        
+        if matched_key:
+            # Update existing fund with fresh Groww holdings
+            existing_funds[matched_key]["holdings"] = fund["holdings"]
+            if fund.get("category") and fund["category"] != "Equity":
+                existing_funds[matched_key]["category"] = fund["category"]
+            updated += 1
+        else:
+            # New fund from Groww — add it
+            existing_funds[key] = fund
+            added += 1
 
-    # Seed Supabase
+    merged = list(existing_funds.values())
+    print(f"Merge result: {len(merged)} total ({updated} updated with fresh Groww data, {added} new funds added, {len(merged) - updated - added} unchanged)")
+
+    # Write merged snapshot
+    write_snapshot(merged, args.output)
+
+    # Seed Supabase with merged data
     if not args.snapshot_only and sb_url and sb_key:
-        print(f"\nSeeding Supabase...")
+        print(f"\nSeeding Supabase ({len(merged)} funds)...")
         month = datetime.now().strftime("%Y-%m")
         scheme_rows = []; holdings_rows = []
-        for i, f in enumerate(all_funds):
+        for i, f in enumerate(merged):
             fid = -(i+1)
-            scheme_rows.append({"family_id":fid,"name":f["name"],"amc":f["amc"],
-                                "category":f["category"],"amfi_code":f.get("amfi_code")})
+            scheme_rows.append({"family_id":fid,"name":f["name"],"amc":f.get("amc",""),
+                                "category":f.get("category",""),"amfi_code":f.get("amfi_code")})
             for h in f["holdings"]:
                 holdings_rows.append({"family_id":fid,"stock_name":h["stock_name"],
                                       "weight_pct":h["weight_pct"],"sector":None,"as_of_month":month})
