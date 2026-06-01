@@ -307,18 +307,36 @@ def write_snapshot(all_funds, output_path="snapshot.py"):
 
 # ─── Supabase ───────────────────────────────────────────────────────
 
-def supabase_upsert(table, rows, sb_url, sb_key):
+def supabase_delete(table, filter_param, sb_url, sb_key):
+    """DELETE rows matching a filter."""
+    url = f"{sb_url}/rest/v1/{table}?{filter_param}"
+    headers = {"apikey":sb_key,"Authorization":f"Bearer {sb_key}",
+                "Content-Type":"application/json"}
+    req = urllib.request.Request(url, headers=headers, method="DELETE")
+    try:
+        urllib.request.urlopen(req, timeout=30)
+    except Exception as e:
+        print(f"    Delete from {table} warning: {e}")
+
+def supabase_insert(table, rows, sb_url, sb_key):
+    """Simple INSERT (no conflict resolution)."""
     if not rows: return 0
-    CHUNK = 200; inserted = 0
+    CHUNK = 100; inserted = 0
     for i in range(0, len(rows), CHUNK):
         chunk = rows[i:i+CHUNK]
         url = f"{sb_url}/rest/v1/{table}"
         headers = {"apikey":sb_key,"Authorization":f"Bearer {sb_key}",
                     "Content-Type":"application/json","Accept":"application/json",
-                    "Prefer":"return=minimal,resolution=merge-duplicates"}
-        req = urllib.request.Request(url, json.dumps(chunk).encode(), headers, method="POST")
-        urllib.request.urlopen(req, timeout=30)
-        inserted += len(chunk)
+                    "Prefer":"return=minimal"}
+        data = json.dumps(chunk).encode()
+        req = urllib.request.Request(url, data=data, headers=headers, method="POST")
+        try:
+            urllib.request.urlopen(req, timeout=30)
+            inserted += len(chunk)
+        except urllib.error.HTTPError as e:
+            body = e.read().decode()[:300] if e.fp else ""
+            print(f"    Insert error ({e.code}): {body}")
+            raise
     return inserted
 
 
@@ -496,8 +514,13 @@ def main():
                 holdings_rows.append({"family_id":fid,"stock_name":h["stock_name"],
                                       "weight_pct":h["weight_pct"],"sector":None,"as_of_month":month})
         try:
-            s = supabase_upsert("schemes", scheme_rows, sb_url, sb_key)
-            h = supabase_upsert("holdings", holdings_rows, sb_url, sb_key)
+            # Delete old snapshot data (negative family_ids), then insert fresh
+            print("  Clearing old snapshot data...")
+            supabase_delete("holdings", "family_id=lt.0", sb_url, sb_key)
+            supabase_delete("schemes", "family_id=lt.0", sb_url, sb_key)
+            print("  Inserting fresh data...")
+            s = supabase_insert("schemes", scheme_rows, sb_url, sb_key)
+            h = supabase_insert("holdings", holdings_rows, sb_url, sb_key)
             print(f"  ✅ Seeded: {s} schemes, {h} holdings")
         except Exception as e:
             print(f"  ⚠️ Supabase failed: {e}")
