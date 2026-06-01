@@ -327,7 +327,7 @@ def supabase_insert(table, rows, sb_url, sb_key):
         url = f"{sb_url}/rest/v1/{table}"
         headers = {"apikey":sb_key,"Authorization":f"Bearer {sb_key}",
                     "Content-Type":"application/json","Accept":"application/json",
-                    "Prefer":"return=minimal"}
+                    "Prefer":"return=minimal,resolution=ignore-duplicates"}
         data = json.dumps(chunk).encode()
         req = urllib.request.Request(url, data=data, headers=headers, method="POST")
         try:
