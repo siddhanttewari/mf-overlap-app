@@ -227,6 +227,14 @@ def _strip_plan_suffix(name):
 def index():
     return send_from_directory("static", "index.html")
 
+@app.route("/robots.txt")
+def robots():
+    return send_from_directory("static", "robots.txt")
+
+@app.route("/sitemap.xml")
+def sitemap():
+    return send_from_directory("static", "sitemap.xml")
+
 
 # ---------- API ----------
 @app.route("/api/health")
