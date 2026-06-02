@@ -1119,5 +1119,38 @@ function initWatchlist() {
 initApp();
 initWatchlist();
 </script>
+<script>
+(function() {
+  function trackEvent(n, p) { if (typeof gtag === 'function') gtag('event', n, p || {}); }
+  function debounce(fn, d) { let t; return function() { clearTimeout(t); const a=arguments,c=this; t=setTimeout(function(){fn.apply(c,a);},d); }; }
+
+  // Search tracking
+  const si = document.getElementById('schemeSearch');
+  if (si) si.addEventListener('input', debounce(function() {
+    const q = si.value.trim();
+    if (q.length >= 3) trackEvent('fund_search', {search_term: q});
+  }, 1000));
+
+  // Analyze button
+  const ab = document.getElementById('analyzeBtn');
+  if (ab) ab.addEventListener('click', function() {
+    trackEvent('analyze_overlap', {funds_compared: document.querySelectorAll('.scheme-chip').length});
+  });
+
+  // Sample button
+  const sb = document.getElementById('sampleBtn');
+  if (sb) sb.addEventListener('click', function() { trackEvent('sample_clicked'); });
+
+  // Scroll depth
+  let marks = {};
+  window.addEventListener('scroll', debounce(function() {
+    const p = Math.round((window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100);
+    [25,50,75,100].forEach(function(m) { if (p >= m && !marks[m]) { marks[m]=true; trackEvent('scroll_depth',{depth:m}); }});
+  }, 200));
+
+  // Time on page
+  [30,60,120,300].forEach(function(s) { setTimeout(function(){ trackEvent('time_on_page',{seconds:s}); }, s*1000); });
+})();
+</script>
 </body>
 </html>
