@@ -3,84 +3,60 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>FundLens — See exactly how your mutual funds overlap</title>
-<meta name="description" content="Compare up to 10 Indian mutual fund schemes. Discover hidden duplication. Build a smarter, more diversified portfolio. Free." />
-
-<!-- Favicon (logo as data URL — works without separate file) -->
+<title>OverlapIQ — Indian Mutual Fund Overlap Analyzer | Compare Portfolio Holdings Free</title>
+<meta name="description" content="Compare holdings across 130+ Indian mutual funds. Discover hidden overlap, concentrated bets, and unique holdings. Free tool covering Large Cap, Mid Cap, Small Cap, Flexi Cap, ELSS, and more from 25+ AMCs." />
+<meta name="keywords" content="mutual fund overlap, portfolio overlap analyzer, mutual fund comparison India, fund holdings comparison, mutual fund portfolio checker, duplicate holdings finder, mutual fund diversification tool" />
+<meta name="author" content="OverlapIQ" />
+<meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large" />
+<link rel="canonical" href="https://overlapiq.in/" />
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://overlapiq.in/" />
+<meta property="og:title" content="OverlapIQ — See How Your Mutual Funds Overlap" />
+<meta property="og:description" content="Free tool to compare holdings across 130+ Indian mutual funds. Spot duplicate stocks, find concentrated bets, build a smarter portfolio." />
+<meta property="og:site_name" content="OverlapIQ" />
+<meta property="og:locale" content="en_IN" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="OverlapIQ — Indian Mutual Fund Overlap Analyzer" />
+<meta name="twitter:description" content="Compare 130+ Indian mutual funds. Discover hidden overlap and build a diversified portfolio. Free, no signup." />
 <link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><defs><linearGradient id="a" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" stop-color="%236366f1"/><stop offset="100%25" stop-color="%233b82f6"/></linearGradient><linearGradient id="b" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" stop-color="%23a855f7"/><stop offset="100%25" stop-color="%23ec4899"/></linearGradient></defs><circle cx="14" cy="20" r="11" fill="url(%23a)" opacity=".85"/><circle cx="26" cy="20" r="11" fill="url(%23b)" opacity=".85"/></svg>' />
-
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-N1QH6QYEC9"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-N1QH6QYEC9');
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "OverlapIQ",
+  "alternateName": "Mutual Fund Overlap Analyzer",
+  "url": "https://overlapiq.in/",
+  "description": "Free tool to compare stock holdings across 130+ Indian mutual funds from 25+ AMCs. Discover hidden portfolio overlap, concentrated bets, and unique holdings.",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Web",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"},
+  "featureList": ["Compare up to 10 mutual fund schemes", "Pairwise overlap heatmap", "Per-fund uniqueness analysis", "Concentrated bets identification", "130+ funds from 25+ AMCs", "Monthly updated holdings data", "Watchlist with portfolio tracking"]
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {"@type": "Question", "name": "What is mutual fund overlap?", "acceptedAnswer": {"@type": "Answer", "text": "Mutual fund overlap occurs when two or more funds in your portfolio hold the same stocks. High overlap means you're paying two expense ratios for essentially the same exposure, reducing true diversification."}},
+    {"@type": "Question", "name": "How is mutual fund overlap calculated?", "acceptedAnswer": {"@type": "Answer", "text": "For each common stock between two funds, take the minimum of the two weights, then sum these minimums. The result is the percentage of portfolio that's duplicated."}},
+    {"@type": "Question", "name": "How many mutual funds should I hold?", "acceptedAnswer": {"@type": "Answer", "text": "Most advisors recommend 3-5 mutual funds for adequate diversification. Beyond 5-6 funds in similar categories, you're likely paying extra expense ratios for the same stocks."}},
+    {"@type": "Question", "name": "Which mutual funds have the least overlap?", "acceptedAnswer": {"@type": "Answer", "text": "Funds in different categories have the least overlap. A Large Cap and Small Cap fund will have very low overlap since they invest in different market segments."}},
+    {"@type": "Question", "name": "Where does OverlapIQ get its data?", "acceptedAnswer": {"@type": "Answer", "text": "OverlapIQ uses SEBI-mandated monthly portfolio disclosures published by each AMC. Data covers 130+ equity schemes across 25+ AMCs and is updated monthly."}}
+  ]
+}
+</script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-
-<style>
-  :root {
-    --grad-1: #6366f1;
-    --grad-2: #8b5cf6;
-    --grad-3: #ec4899;
-  }
-  html, body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-  body { background: linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%); min-height: 100vh; }
-
-  /* Logo */
-  .logo-mark {
-    width: 36px; height: 36px;
-    flex-shrink: 0;
-  }
-
-  /* Buttons / chips */
-  .scheme-chip { transition: all 0.18s ease; }
-  .scheme-chip:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(99, 102, 241, 0.18); }
-  .heatmap-cell { transition: all 0.15s ease; cursor: default; }
-  .heatmap-cell:hover { transform: scale(1.06); z-index: 10; box-shadow: 0 8px 24px rgba(15, 23, 42, 0.2); }
-  .dropdown-item { transition: background-color 0.12s; }
-  .dropdown-item:hover { background: linear-gradient(90deg, #eef2ff, #f5f3ff); }
-
-  /* Status pulse */
-  .pulse-dot { animation: pulse 2s infinite; }
-  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-  /* Spinner */
-  .spinner { border: 3px solid #e0e7ff; border-top: 3px solid #6366f1; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; }
-  .spinner-sm { border-width: 2px; width: 14px; height: 14px; display: inline-block; vertical-align: -2px; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Custom scrollbar */
-  .scrollbar-thin::-webkit-scrollbar { width: 6px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 3px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-  /* Hero gradient */
-  .hero-bg {
-    background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(99,102,241,0.15), transparent 70%),
-                radial-gradient(ellipse 60% 40% at 80% 30%, rgba(168,85,247,0.10), transparent 70%);
-  }
-
-  /* Cards */
-  .card { background: white; border: 1px solid #e2e8f0; border-radius: 16px; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04); transition: box-shadow 0.2s; }
-  .card-hover:hover { box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
-
-  /* Primary button gradient */
-  .btn-primary {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-    transition: all 0.2s;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.35);
-  }
-  .btn-primary:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 22px rgba(99, 102, 241, 0.45);
-  }
-  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; box-shadow: none; }
-
-  /* Subtle reveal */
-  .reveal { animation: reveal 0.4s ease-out; }
-  @keyframes reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-
-  /* Search input glow on focus */
-  #schemeSearch:focus { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12), 0 1px 3px rgba(15,23,42,0.06); }
-</style>
 </head>
 <body class="text-slate-800">
 
