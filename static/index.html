@@ -264,6 +264,105 @@
     </section>
   </div><!-- /view-portfolio -->
 
+  <!-- ================================ HOW IT WORKS (SEO Content) ================================ -->
+  <section class="mt-14 card p-6 sm:p-8">
+    <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4">How Mutual Fund Overlap Analysis Works</h2>
+    <div class="prose prose-slate max-w-none text-sm sm:text-base leading-relaxed space-y-4 text-slate-700">
+      <p>When you invest in multiple mutual funds, your portfolio may hold the <strong>same stocks across different schemes</strong> without you realising it. For example, HDFC Bank is typically a top holding in most Large Cap, Flexi Cap, and even Balanced Advantage funds. If you hold three such funds, you're effectively tripling your HDFC Bank exposure — and paying three expense ratios for it.</p>
+      <p>OverlapIQ analyses this by comparing the <strong>actual stock-level holdings</strong> of each fund you select. We use the industry-standard overlap formula: for every stock held in common between two funds, we take the <strong>minimum of the two weights</strong>, then sum these minimums. The result tells you what percentage of your portfolio is duplicated.</p>
+      <p>For example, if Fund A holds Reliance at 8% and Fund B holds it at 5%, Reliance contributes 5% to their overlap. A total overlap of 60%+ between two funds means they're largely investing in the same stocks — you might want to consider consolidating.</p>
+      <p>Our data comes from <strong>SEBI-mandated monthly portfolio disclosures</strong> published by every Asset Management Company (AMC) in India. We cover <strong>130+ equity mutual fund schemes across 25+ AMCs</strong>, updated monthly. Categories include Large Cap, Mid Cap, Small Cap, Flexi Cap, Multi Cap, ELSS, Value, Focused, Index, Sectoral/Thematic, and Hybrid funds.</p>
+    </div>
+  </section>
+
+  <!-- ================================ FAQ (Visible — matches JSON-LD for AEO/AIO) ================================ -->
+  <section class="mt-8 card p-6 sm:p-8">
+    <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-6">Frequently Asked Questions</h2>
+    <div class="space-y-4" id="faqAccordion">
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>What is mutual fund overlap and why does it matter?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Mutual fund overlap occurs when two or more funds in your portfolio hold the same stocks. For example, if your Large Cap fund and Flexi Cap fund both hold HDFC Bank at 9% each, you have significant overlap. High overlap means you're paying two expense ratios for essentially the same exposure, reducing true diversification. Ideally, each fund you own should contribute unique stocks to your portfolio.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>How is the overlap percentage calculated?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>OverlapIQ uses the standard minimum-weight methodology. For each stock held in common between two funds, we take the minimum of the two portfolio weights and sum them. For example, if Fund A holds Infosys at 7% and Fund B holds it at 5%, Infosys contributes 5% to their overlap score. A result of 60%+ indicates very high overlap — these funds are largely investing in the same companies.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>How many mutual funds should I hold in my portfolio?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Most financial advisors recommend holding 3 to 5 mutual funds for adequate diversification without excessive overlap. A common portfolio might include one Large Cap or Index fund, one Mid/Small Cap fund, and one Flexi Cap or ELSS fund. Beyond 5-6 funds, especially within the same category, the incremental diversification benefit drops sharply while overlap increases. Use OverlapIQ to verify your specific combination.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>Which mutual fund categories overlap the most?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Large Cap funds typically have the highest overlap with each other — since they all invest in the same top 100 companies by market cap, their portfolios naturally converge. Two Large Cap funds often share 60-80% of holdings. Flexi Cap funds also tend to have significant overlap with Large Caps since fund managers often allocate 50-70% to large cap stocks. In contrast, Small Cap and Sectoral/Thematic funds have much lower overlap with other categories.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>Is it bad to hold two Large Cap funds?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Generally, yes — holding two Large Cap funds provides limited additional diversification. Since both invest in the same universe of top 100 stocks, their portfolios will largely mirror each other (typically 50-75% overlap). You end up paying two expense ratios for nearly identical exposure. Instead, combine a Large Cap fund with a Mid Cap, Small Cap, or Index fund for broader market coverage. Check your specific pair on OverlapIQ to see the exact overlap.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>How to reduce mutual fund overlap in your portfolio?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Three strategies: First, <strong>diversify across categories</strong> — combine Large Cap, Mid Cap, Small Cap, and Sectoral funds instead of multiple funds in the same category. Second, <strong>consolidate similar funds</strong> — if two funds overlap by more than 50%, consider keeping the better performer and redirecting SIPs. Third, <strong>mix active and passive</strong> — pair an Index fund (for broad market exposure) with an active Mid/Small Cap fund (for alpha generation). Always check overlap using OverlapIQ before adding a new fund.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>Where does OverlapIQ get its holdings data?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>OverlapIQ uses SEBI-mandated monthly portfolio disclosures published by each Asset Management Company (AMC). Under SEBI regulations, all mutual fund houses must publish their complete portfolio holdings every month. We aggregate this data across 130+ equity mutual fund schemes from 25+ AMCs including HDFC, ICICI Prudential, SBI, Axis, Kotak, Nippon India, Mirae Asset, DSP, Tata, and more. Data is refreshed automatically on the 10th of each month.</p>
+        </div>
+      </details>
+
+      <details class="group border border-slate-200 rounded-xl overflow-hidden">
+        <summary class="flex items-center justify-between px-5 py-4 cursor-pointer hover:bg-slate-50 transition font-semibold text-slate-900 text-sm sm:text-base">
+          <span>Is OverlapIQ free to use?</span>
+          <svg class="w-5 h-5 text-slate-400 group-open:rotate-180 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/></svg>
+        </summary>
+        <div class="px-5 pb-4 text-sm text-slate-600 leading-relaxed">
+          <p>Yes, completely free. No signup, no login, no hidden charges. Compare up to 10 mutual fund schemes instantly. Save funds to your watchlist for ongoing tracking. Share your watchlist with others via a simple link. OverlapIQ is built as a public utility for Indian mutual fund investors.</p>
+        </div>
+      </details>
+
+    </div>
+  </section>
+
   <!-- Footer / disclosures -->
   <footer class="mt-14 pt-7 border-t border-slate-200 text-xs text-slate-500 leading-relaxed">
     <div class="grid sm:grid-cols-2 gap-6">
