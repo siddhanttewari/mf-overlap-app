@@ -80,12 +80,15 @@
       </svg>
       <div class="leading-tight">
         <div class="text-lg sm:text-xl font-bold tracking-tight bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 bg-clip-text text-transparent">OverlapIQ</div>
-        <div class="text-[11px] text-slate-500 font-medium">Mutual fund overlap analyzer</div>
+        <div class="text-[11px] text-slate-500 font-medium hidden sm:block">Smart overlap detection for Indian mutual funds</div>
       </div>
     </a>
-    <div class="hidden sm:flex items-center gap-2 text-xs bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-slate-600">
-      <span class="pulse-dot w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
-      <span id="dataStatus" class="font-medium">Loading…</span>
+    <div class="flex items-center gap-4">
+      <a href="/blog" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">Blog</a>
+      <div class="hidden sm:flex items-center gap-2 text-xs bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-slate-600">
+        <span class="pulse-dot w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+        <span id="dataStatus" class="font-medium">Loading…</span>
+      </div>
     </div>
   </div>
 </header>
@@ -117,12 +120,12 @@
 <main class="max-w-6xl mx-auto px-5 sm:px-6 pb-16">
 
   <!-- Tab navigation -->
-  <nav id="tabNav" class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1 mb-6 shadow-sm sm:inline-flex">
-    <button data-view="analyzer" class="tab-btn flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition">
-      Overlap analyzer
+  <nav id="tabNav" class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1.5 mb-6 shadow-sm w-full sm:w-auto sm:inline-flex">
+    <button data-view="analyzer" class="tab-btn flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-lg text-sm sm:text-sm font-bold transition text-center">
+      📊 Overlap Analyzer
     </button>
-    <button data-view="portfolio" class="tab-btn flex-1 sm:flex-none px-4 py-2 rounded-lg text-sm font-semibold transition flex items-center justify-center gap-1.5">
-      My Portfolio
+    <button data-view="portfolio" class="tab-btn flex-1 sm:flex-none px-4 sm:px-5 py-2.5 rounded-lg text-sm sm:text-sm font-bold transition flex items-center justify-center gap-1.5">
+      ⭐ My Portfolio
       <span id="watchCount" class="hidden text-xs bg-indigo-100 text-indigo-700 rounded-full px-1.5 py-0.5 font-bold leading-none">0</span>
     </button>
   </nav>
