@@ -235,6 +235,15 @@ def robots():
 def sitemap():
     return send_from_directory("static", "sitemap.xml")
 
+@app.route("/blog")
+@app.route("/blog/")
+def blog_index():
+    return send_from_directory("static/blog", "index.html")
+
+@app.route("/blog/<slug>")
+def blog_post(slug):
+    return send_from_directory("static/blog", f"{slug}.html")
+
 
 # ---------- API ----------
 @app.route("/api/health")
