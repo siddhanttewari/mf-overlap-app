@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Are Your SIPs Buying the Same Stocks? SIP Overlap Guide | OverlapIQ</title>
+<meta name="description" content="If you run multiple SIPs in the same category, they're probably buying the same stocks. Learn how SIP portfolio overlap happens, how to check it, and how to fix it — for Indian investors (2026)." />
+<meta name="keywords" content="sip portfolio overlap, are my sips buying the same stocks, sip overlap, multiple sip overlap, do sips overlap, mutual fund sip overlap, sip diversification" />
+<link rel="canonical" href="https://overlapiq.in/blog/sip-portfolio-overlap" />
+<meta property="og:title" content="Are Your SIPs Buying the Same Stocks? SIP Overlap Guide" />
+<meta property="og:description" content="Multiple SIPs in the same category often hold 50-70% identical stocks. Here's how to check your SIP overlap and fix it." />
+<meta property="og:url" content="https://overlapiq.in/blog/sip-portfolio-overlap" />
+<meta property="og:type" content="article" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Article","headline":"Are Your SIPs Buying the Same Stocks? A Guide to SIP Portfolio Overlap","description":"If you run multiple SIPs in the same category, they are probably buying the same stocks. How SIP overlap happens, how to check it, and how to fix it.","author":{"@type":"Organization","name":"OverlapIQ"},"publisher":{"@type":"Organization","name":"OverlapIQ","url":"https://overlapiq.in"},"datePublished":"2026-06-06","dateModified":"2026-06-06","mainEntityOfPage":"https://overlapiq.in/blog/sip-portfolio-overlap"}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://overlapiq.in/"},{"@type":"ListItem","position":2,"name":"Blog","item":"https://overlapiq.in/blog"},{"@type":"ListItem","position":3,"name":"Are Your SIPs Buying the Same Stocks?","item":"https://overlapiq.in/blog/sip-portfolio-overlap"}]}
+</script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Can two SIPs in different funds buy the same stocks?","acceptedAnswer":{"@type":"Answer","text":"Yes. If both funds belong to the same category — for example two large-cap or two flexi-cap funds — they often hold 50-70% of the same underlying stocks, even when they are from different fund houses."}},{"@type":"Question","name":"Does running SIPs across different AMCs avoid overlap?","acceptedAnswer":{"@type":"Answer","text":"No. Different fund houses still select from the same universe of top Indian companies. Three large-cap SIPs across three different AMCs can still overlap by 60% or more."}},{"@type":"Question","name":"How do I check if my SIPs overlap?","acceptedAnswer":{"@type":"Answer","text":"Compare each fund's published holdings, or use an overlap tool such as OverlapIQ that calculates the pairwise overlap percentage between your funds in a few seconds."}},{"@type":"Question","name":"Should I stop a SIP if it overlaps too much?","acceptedAnswer":{"@type":"Answer","text":"Often it is better to redirect the new SIP instalments into a different category rather than redeem existing units, which avoids exit load and capital-gains tax on what you already hold."}},{"@type":"Question","name":"How much SIP overlap is acceptable?","acceptedAnswer":{"@type":"Answer","text":"Below 30% overlap is healthy. Between 30% and 50% is borderline and depends on whether the funds differ in market cap or style. Above 50% means you are largely paying two expense ratios for one portfolio."}}]}
+</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-N1QH6QYEC9"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-N1QH6QYEC9');</script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',sans-serif;} body{background:linear-gradient(180deg,#f8fafc 0%,#eef2ff 100%);min-height:100vh;} .prose p{margin-bottom:1.25rem;line-height:1.75;} .prose h2{margin-top:2rem;margin-bottom:0.75rem;} .prose h3{margin-top:1.5rem;margin-bottom:0.5rem;}</style>
+</head>
+<body class="text-slate-800">
+
+<header class="border-b border-slate-200/70 bg-white/85 backdrop-blur-sm sticky top-0 z-30">
+  <div class="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between">
+    <a href="/" class="flex items-center gap-3">
+      <svg class="w-9 h-9" viewBox="0 0 40 40"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs><circle cx="14" cy="20" r="11" fill="url(#g1)" opacity="0.85"/><circle cx="26" cy="20" r="11" fill="url(#g2)" opacity="0.85"/></svg>
+      <span class="text-xl font-bold bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 bg-clip-text text-transparent">OverlapIQ</span>
+    </a>
+    <nav class="flex gap-4 text-sm">
+      <a href="/" class="text-slate-600 hover:text-indigo-600 font-medium">Analyzer</a>
+      <a href="/blog" class="text-indigo-600 font-semibold">Blog</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-3xl mx-auto px-5 py-10">
+  <nav class="text-sm text-slate-500 mb-6">
+    <a href="/" class="hover:text-indigo-600">Home</a> <span class="mx-1">›</span>
+    <a href="/blog" class="hover:text-indigo-600">Blog</a> <span class="mx-1">›</span>
+    <span class="text-slate-700">Are Your SIPs Buying the Same Stocks?</span>
+  </nav>
+
+  <article class="prose max-w-none">
+    <div class="mb-8">
+      <div class="flex items-center gap-2 text-xs font-semibold mb-3">
+        <span class="bg-violet-50 text-violet-700 px-2 py-0.5 rounded-full">Guide</span>
+        <span class="text-slate-400">June 6, 2026</span>
+        <span class="text-slate-400">· 8 min read</span>
+      </div>
+      <h1 class="text-3xl sm:text-4xl font-bold text-slate-900 leading-tight mb-4">Are Your SIPs Buying the Same Stocks? A Guide to SIP Portfolio Overlap</h1>
+      <p class="text-lg text-slate-600">Most investors build their SIPs one at a time, over several years — a large-cap fund here, a "diversifying" flexi-cap there, an ELSS at tax season. The quiet problem: many of those SIPs are pouring money into the exact same stocks.</p>
+    </div>
+
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 mb-8">
+      <p class="text-sm font-semibold text-indigo-900 mb-1">Quick answer</p>
+      <p class="text-sm text-indigo-800 mb-0">Yes — if you run more than one SIP in the same category, they are very likely buying the same stocks. Two large-cap or two flexi-cap funds typically share <strong>50-70% of their holdings</strong>, even across different AMCs. That means a large slice of your monthly SIP is being invested twice into the same companies, with two expense ratios attached.</p>
+    </div>
+
+    <div class="bg-slate-100 rounded-xl p-5 mb-8 text-sm">
+      <p class="font-semibold text-slate-900 mb-2">In this guide:</p>
+      <ul class="space-y-1 text-slate-600">
+        <li><a href="#why-sips-overlap" class="text-indigo-600 hover:underline">Why SIPs quietly create overlap</a></li>
+        <li><a href="#example" class="text-indigo-600 hover:underline">A real example: three common SIPs</a></li>
+        <li><a href="#signs" class="text-indigo-600 hover:underline">Signs your SIPs overlap</a></li>
+        <li><a href="#how-much" class="text-indigo-600 hover:underline">How much SIP overlap is too much?</a></li>
+        <li><a href="#fix" class="text-indigo-600 hover:underline">How to fix overlapping SIPs</a></li>
+        <li><a href="#check" class="text-indigo-600 hover:underline">How to check your SIP overlap</a></li>
+        <li><a href="#faq" class="text-indigo-600 hover:underline">FAQ</a></li>
+      </ul>
+    </div>
+
+    <h2 id="why-sips-overlap" class="text-2xl font-bold text-slate-900">Why SIPs Quietly Create Overlap</h2>
+    <p class="text-slate-700">SIP overlap happens because SIPs are added gradually and rarely reviewed together. Each fund looked like a good idea on its own, but no one checked whether the new fund was buying what the existing ones already owned. Three habits drive almost all of it:</p>
+    <p class="text-slate-700"><strong>1. "Different fund house = different portfolio."</strong> This is the most common myth. A large-cap fund — whichever AMC runs it — is mandated to invest at least 80% in the top 100 companies by market cap. There are only 100 such companies, so every large-cap fund is fishing from the same small pond. Different brand, same fish.</p>
+    <p class="text-slate-700"><strong>2. Adding funds to feel "more diversified."</strong> Investors often add a fifth or sixth SIP for safety. But once you hold a few equity funds in the same category, each new one mostly duplicates what you already have rather than adding genuinely new exposure.</p>
+    <p class="text-slate-700"><strong>3. Category labels that hide the truth.</strong> A flexi-cap fund <em>can</em> invest across market caps, but in practice most flexi-cap managers park 60-70% in large caps for stability. So your "flexi-cap for diversification" often looks a lot like your large-cap fund underneath.</p>
+
+    <h2 id="example" class="text-2xl font-bold text-slate-900">A Real Example: Three Common SIPs</h2>
+    <p class="text-slate-700">Imagine a fairly typical Indian SIP portfolio: a large-cap fund, a flexi-cap fund, and an ELSS tax-saver. On the surface, three different categories across (say) three different AMCs. Underneath, here's the kind of shared core you'll usually find:</p>
+
+    <div class="overflow-x-auto my-5">
+      <table class="w-full text-sm border border-slate-200 rounded-lg overflow-hidden">
+        <thead class="bg-slate-100 text-slate-700">
+          <tr>
+            <th class="text-left px-4 py-2 font-semibold">Stock</th>
+            <th class="text-center px-4 py-2 font-semibold">Large Cap</th>
+            <th class="text-center px-4 py-2 font-semibold">Flexi Cap</th>
+            <th class="text-center px-4 py-2 font-semibold">ELSS</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100 text-slate-700">
+          <tr><td class="px-4 py-2">HDFC Bank</td><td class="text-center">✔</td><td class="text-center">✔</td><td class="text-center">✔</td></tr>
+          <tr><td class="px-4 py-2">ICICI Bank</td><td class="text-center">✔</td><td class="text-center">✔</td><td class="text-center">✔</td></tr>
+          <tr><td class="px-4 py-2">Reliance Industries</td><td class="text-center">✔</td><td class="text-center">✔</td><td class="text-center">✔</td></tr>
+          <tr><td class="px-4 py-2">Infosys</td><td class="text-center">✔</td><td class="text-center">✔</td><td class="text-center">✔</td></tr>
+          <tr><td class="px-4 py-2">Larsen &amp; Toubro</td><td class="text-center">✔</td><td class="text-center">✔</td><td class="text-center">—</td></tr>
+          <tr><td class="px-4 py-2">Axis Bank</td><td class="text-center">✔</td><td class="text-center">—</td><td class="text-center">✔</td></tr>
+        </tbody>
+      </table>
+      <p class="text-xs text-slate-500 mt-2">Illustrative example. Exact holdings and weights vary by fund and change every month — but the shared large-cap core is remarkably consistent across categories.</p>
+    </div>
+
+    <p class="text-slate-700">The result: even though you picked three "different" funds, the top 5-6 names — and often 50-65% of total weight — are the same companies. Your monthly SIP is buying HDFC Bank and Reliance three times over.</p>
+
+    <h2 id="signs" class="text-2xl font-bold text-slate-900">Signs Your SIPs Overlap</h2>
+    <p class="text-slate-700">You probably have meaningful SIP overlap if any of these is true:</p>
+    <p class="text-slate-700">• Two or more of your SIPs are in the <strong>same category</strong> (e.g. two large-cap, two flexi-cap, or large-cap + ELSS).<br>
+    • You chose funds mainly by <strong>past returns or AMC brand</strong>, not by category or holdings.<br>
+    • You added funds over time to "diversify" without ever comparing them side by side.<br>
+    • Most of your funds are <strong>large-cap-heavy</strong> (large-cap, flexi-cap, focused, and most ELSS funds usually are).</p>
+    <p class="text-slate-700">The opposite — genuinely low overlap — usually means your SIPs span different market caps (large vs mid vs small) or different styles (active vs index), so they're fishing in different ponds.</p>
+
+    <h2 id="how-much" class="text-2xl font-bold text-slate-900">How Much SIP Overlap Is Too Much?</h2>
+    <p class="text-slate-700">Some overlap is unavoidable — any two Indian equity funds will share a few household names. Here's a practical framework for judging it:</p>
+
+    <div class="grid sm:grid-cols-3 gap-4 my-5">
+      <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-emerald-700 mb-1">0-30%</div>
+        <div class="text-xs font-semibold text-emerald-800 mb-1">HEALTHY</div>
+        <div class="text-xs text-emerald-700">Your SIPs complement each other. Good diversification.</div>
+      </div>
+      <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-amber-700 mb-1">30-50%</div>
+        <div class="text-xs font-semibold text-amber-800 mb-1">BORDERLINE</div>
+        <div class="text-xs text-amber-700">Acceptable only if the funds differ in market cap or style.</div>
+      </div>
+      <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+        <div class="text-2xl font-bold text-red-700 mb-1">50%+</div>
+        <div class="text-xs font-semibold text-red-800 mb-1">REDUNDANT</div>
+        <div class="text-xs text-red-700">You're paying two expense ratios for one portfolio.</div>
+      </div>
+    </div>
+
+    <p class="text-slate-700">For a deeper look at the right number of funds to hold, see our guide on <a href="/blog/how-many-mutual-funds-should-you-hold" class="text-indigo-600 hover:underline">how many mutual funds you should hold</a> — the short version is that 3-5 well-chosen funds usually beats 8-12 overlapping ones.</p>
+
+    <h2 id="fix" class="text-2xl font-bold text-slate-900">How to Fix Overlapping SIPs</h2>
+    <p class="text-slate-700">The good news: fixing SIP overlap rarely means selling anything. Because SIPs are forward-flowing, you can usually fix the problem by changing where <em>future</em> instalments go.</p>
+    <p class="text-slate-700"><strong>Redirect, don't redeem.</strong> If two SIPs overlap heavily, stop the weaker one (lower returns, higher expense ratio) and redirect that monthly amount into a different category — a mid-cap, small-cap, or index fund. Your existing units stay invested, so you avoid exit load and capital-gains tax.</p>
+    <p class="text-slate-700"><strong>Diversify across market caps.</strong> A large-cap and a small-cap fund typically overlap only 5-15%, versus 50-70% for two large-caps. Spanning the cap spectrum is the single most effective way to cut overlap.</p>
+    <p class="text-slate-700"><strong>Mix active and passive.</strong> Pair a low-cost Nifty 50 or Nifty Next 50 index fund for core exposure with one active mid- or small-cap fund for potential alpha. This avoids two active large-cap managers buying the same stocks.</p>
+    <p class="text-slate-700"><strong>Mind the tax before redeeming.</strong> If you do decide to exit a fund, remember that equity STCG is taxed at 20% and LTCG at 12.5% above ₹1.25 lakh per year, and funds may charge ~1% exit load within the first year. Redirecting future SIPs sidesteps all of this.</p>
+
+    <h2 id="check" class="text-2xl font-bold text-slate-900">How to Check Your SIP Overlap</h2>
+    <p class="text-slate-700">You can compare your funds' monthly portfolio disclosures by hand from each AMC's website — but with three or more SIPs you'd need to check every pair, name by name. It's slow and error-prone.</p>
+    <p class="text-slate-700">The faster way is to let a tool do the math.</p>
+
+    <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-5 my-8">
+      <p class="text-base font-semibold text-indigo-900 mb-2">Check your SIP overlap in 30 seconds</p>
+      <p class="text-sm text-indigo-700 mb-3"><a href="/" class="underline font-semibold">OverlapIQ</a> lets you compare up to 10 funds at once. Add your SIP funds, hit Analyze, and you'll get a pairwise overlap matrix, per-fund uniqueness scores, and your most concentrated stock bets. Save your funds to <strong>My Portfolio</strong> and you can also track how their overlap shifts month over month — because fund managers rebalance constantly. Free, no signup.</p>
+      <a href="/" class="inline-block bg-gradient-to-r from-indigo-600 to-violet-600 text-white px-6 py-2.5 rounded-xl font-semibold text-sm hover:shadow-lg transition">Analyze My SIPs →</a>
+    </div>
+
+    <h2 id="faq" class="text-2xl font-bold text-slate-900">Frequently Asked Questions</h2>
+
+    <h3 class="text-lg font-bold text-slate-900">Can two SIPs in different funds buy the same stocks?</h3>
+    <p class="text-slate-700">Yes. If both funds belong to the same category — for example two large-cap or two flexi-cap funds — they often hold 50-70% of the same underlying stocks, even when they are from different fund houses.</p>
+
+    <h3 class="text-lg font-bold text-slate-900">Does running SIPs across different AMCs avoid overlap?</h3>
+    <p class="text-slate-700">No. Different fund houses still select from the same universe of top Indian companies. Three large-cap SIPs across three different AMCs can still overlap by 60% or more.</p>
+
+    <h3 class="text-lg font-bold text-slate-900">How do I check if my SIPs overlap?</h3>
+    <p class="text-slate-700">Compare each fund's published holdings, or use an overlap tool such as <a href="/" class="text-indigo-600 hover:underline">OverlapIQ</a> that calculates the pairwise overlap percentage between your funds in a few seconds.</p>
+
+    <h3 class="text-lg font-bold text-slate-900">Should I stop a SIP if it overlaps too much?</h3>
+    <p class="text-slate-700">Often it is better to redirect the new SIP instalments into a different category rather than redeem existing units, which avoids exit load and capital-gains tax on what you already hold.</p>
+
+    <h3 class="text-lg font-bold text-slate-900">How much SIP overlap is acceptable?</h3>
+    <p class="text-slate-700">Below 30% overlap is healthy. Between 30% and 50% is borderline and depends on whether the funds differ in market cap or style. Above 50% means you are largely paying two expense ratios for one portfolio.</p>
+
+    <p class="text-xs text-slate-400 mt-8"><em>Disclaimer: This article is for educational purposes only and does not constitute investment advice. Mutual fund investments are subject to market risks. Read all scheme-related documents carefully before investing. Consult a SEBI-registered investment advisor for personalised advice.</em></p>
+  </article>
+</main>
+
+<footer class="max-w-3xl mx-auto px-5 py-8 border-t border-slate-200 text-xs text-slate-500 text-center">
+  <a href="/" class="text-indigo-600 hover:underline">← Back to OverlapIQ Analyzer</a> · <a href="/blog" class="text-indigo-600 hover:underline">All Posts</a> · <a href="/blog/what-is-mutual-fund-overlap" class="text-indigo-600 hover:underline">What is Mutual Fund Overlap? →</a>
+</footer>
+</body>
+</html>
