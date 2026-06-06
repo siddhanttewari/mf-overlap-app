@@ -307,6 +307,15 @@ def write_snapshot(all_funds, output_path="snapshot.py"):
 
 # ─── Supabase ───────────────────────────────────────────────────────
 
+def _fund_key(name):
+    """Stable, URL-safe slug from a fund name. MUST stay identical to the
+    normalizer in app.py and migrations/p2_holdings_history.sql:
+      lower -> non-[a-z0-9] runs become '-' -> strip leading/trailing '-'."""
+    s = (name or "").strip().lower()
+    s = re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+    return s
+
+
 def supabase_delete(table, filter_param, sb_url, sb_key):
     """DELETE rows matching a filter."""
     url = f"{sb_url}/rest/v1/{table}?{filter_param}"
@@ -524,6 +533,31 @@ def main():
             print(f"  ✅ Seeded: {s} schemes, {h} holdings")
         except Exception as e:
             print(f"  ⚠️ Supabase failed: {e}")
+
+        # ---- P2: append THIS month to holdings_history (append-only) ----
+        # Keyed by stable fund_key so month-over-month diffs stay correct
+        # even when positional family_ids reshuffle. Prior months are kept.
+        print("  Updating holdings_history (month-over-month)...")
+        hist_rows = []
+        for f in merged:
+            fk = _fund_key(f["name"])
+            for h in f["holdings"]:
+                hist_rows.append({
+                    "fund_key": fk,
+                    "fund_name": f["name"],
+                    "amc": f.get("amc", ""),
+                    "stock_name": h["stock_name"],
+                    "weight_pct": h["weight_pct"],
+                    "sector": None,
+                    "as_of_month": month,
+                })
+        try:
+            # Idempotent: replace only THIS month's rows; never prior months.
+            supabase_delete("holdings_history", f"as_of_month=eq.{month}", sb_url, sb_key)
+            hh = supabase_insert("holdings_history", hist_rows, sb_url, sb_key)
+            print(f"  ✅ holdings_history: {hh} rows for {month}")
+        except Exception as e:
+            print(f"  ⚠️ holdings_history failed: {e}")
 
     print("\n✅ Done!")
 

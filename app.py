@@ -166,6 +166,31 @@ def supabase_upsert(table, rows):
     return inserted
 
 
+def _fund_key(name):
+    """Stable slug from a fund name. MUST match scrape_groww_v2.py and
+    migrations/p2_holdings_history.sql: lower -> non-[a-z0-9] runs -> '-' -> trim '-'."""
+    s = (name or "").strip().lower()
+    out = []
+    prev_dash = False
+    for ch in s:
+        if ch.isascii() and ch.isalnum():
+            out.append(ch)
+            prev_dash = False
+        elif not prev_dash:
+            out.append("-")
+            prev_dash = True
+    return "".join(out).strip("-")
+
+
+def supabase_history_for_key(fund_key):
+    """All history rows for one fund_key, newest month first."""
+    return _supabase_request("GET", "holdings_history", params={
+        "select": "fund_name,amc,stock_name,weight_pct,sector,as_of_month",
+        "fund_key": f"eq.{fund_key}",
+        "order": "as_of_month.desc",
+    }) or []
+
+
 def _upstream_is_down():
     return time.time() < _upstream_outage_until
 
@@ -486,6 +511,162 @@ def api_refresh():
         _stats_cache["fetched_at"] = 0
     _upstream_outage_until = 0
     return jsonify({"status": "refreshed"})
+
+
+# ============================================================
+# P2 — Monthly Portfolio Change Tracker
+# GET /api/portfolio/diff?names=<fund name>&names=<...>[&from=YYYY-MM&to=YYYY-MM]
+# Reads holdings_history (keyed by stable fund_key) and returns per-fund and
+# portfolio-level added / exited / re-weighted stocks between two months.
+# ============================================================
+@app.route("/api/portfolio/diff")
+def api_portfolio_diff():
+    if not SUPABASE_ENABLED:
+        return jsonify({
+            "status": "unavailable",
+            "message": "History storage is not configured.",
+        })
+
+    names = request.args.getlist("names")
+    names = [n.strip() for n in names if n and n.strip()][:25]
+    if not names:
+        return jsonify({"status": "no_funds", "message": "No funds provided."})
+
+    MIN_DELTA = 0.05  # ignore sub-0.05pp wobble (rounding noise)
+
+    funds_data = {}     # fund_key -> {name, amc, months:{month:{stock:{w,sector}}}}
+    all_months = set()
+    for nm in names:
+        fk = _fund_key(nm)
+        if fk in funds_data:
+            continue
+        try:
+            rows = supabase_history_for_key(fk)
+        except Exception as e:
+            print(f"[history] fetch failed for {fk}: {e}")
+            rows = []
+        months, disp_name, disp_amc = {}, nm, ""
+        for r in rows:
+            m = r.get("as_of_month")
+            if not m:
+                continue
+            all_months.add(m)
+            months.setdefault(m, {})[r["stock_name"]] = {
+                "w": float(r["weight_pct"]),
+                "sector": r.get("sector"),
+            }
+            disp_name = r.get("fund_name") or disp_name
+            disp_amc = r.get("amc") or disp_amc
+        funds_data[fk] = {"name": disp_name, "amc": disp_amc, "months": months}
+
+    months_sorted = sorted(all_months)
+    if len(months_sorted) < 2:
+        return jsonify({
+            "status": "insufficient_history",
+            "available_months": months_sorted,
+            "message": ("Month-over-month changes appear once at least two "
+                        "monthly snapshots have been captured."),
+        })
+
+    # Resolve the comparison window
+    req_from = request.args.get("from")
+    req_to = request.args.get("to")
+    to_month = req_to if req_to in months_sorted else months_sorted[-1]
+    if req_from in months_sorted and req_from != to_month:
+        from_month = req_from
+    else:
+        earlier = [m for m in months_sorted if m < to_month]
+        from_month = earlier[-1] if earlier else months_sorted[0]
+
+    def diff_maps(a, b):
+        added, removed, changed = [], [], []
+        for stock, info in b.items():
+            if stock not in a:
+                added.append({"stock_name": stock,
+                              "weight_pct": round(info["w"], 2),
+                              "sector": info.get("sector")})
+            else:
+                d = info["w"] - a[stock]["w"]
+                if abs(d) >= MIN_DELTA:
+                    changed.append({"stock_name": stock,
+                                    "from_pct": round(a[stock]["w"], 2),
+                                    "to_pct": round(info["w"], 2),
+                                    "delta": round(d, 2)})
+        for stock, info in a.items():
+            if stock not in b:
+                removed.append({"stock_name": stock,
+                                "weight_pct": round(info["w"], 2),
+                                "sector": info.get("sector")})
+        added.sort(key=lambda x: -x["weight_pct"])
+        removed.sort(key=lambda x: -x["weight_pct"])
+        changed.sort(key=lambda x: -abs(x["delta"]))
+        return added, removed, changed
+
+    funds_out = []
+    agg = {from_month: {}, to_month: {}}
+    n_with_data = {from_month: 0, to_month: 0}
+
+    for fk, fd in funds_data.items():
+        a = fd["months"].get(from_month, {})
+        b = fd["months"].get(to_month, {})
+        if not a and not b:
+            continue
+        added, removed, changed = diff_maps(a, b)
+        funds_out.append({
+            "fund_key": fk,
+            "name": fd["name"],
+            "amc": fd["amc"],
+            "has_from": bool(a),
+            "has_to": bool(b),
+            "added": added,
+            "removed": removed,
+            "changed": changed,
+            "summary": {"added": len(added), "removed": len(removed),
+                        "changed": len(changed)},
+        })
+        for mlabel, mp in ((from_month, a), (to_month, b)):
+            if mp:
+                n_with_data[mlabel] += 1
+                for stock, info in mp.items():
+                    agg[mlabel][stock] = agg[mlabel].get(stock, 0.0) + info["w"]
+
+    def norm_agg(mlabel):
+        n = max(1, n_with_data[mlabel])
+        return {s: w / n for s, w in agg[mlabel].items()}
+
+    a_agg, b_agg = norm_agg(from_month), norm_agg(to_month)
+    pa, pr, pc = [], [], []
+    for stock, w in b_agg.items():
+        if stock not in a_agg:
+            pa.append({"stock_name": stock, "weight_pct": round(w, 2)})
+        else:
+            d = w - a_agg[stock]
+            if abs(d) >= MIN_DELTA:
+                pc.append({"stock_name": stock,
+                           "from_pct": round(a_agg[stock], 2),
+                           "to_pct": round(w, 2), "delta": round(d, 2)})
+    for stock, w in a_agg.items():
+        if stock not in b_agg:
+            pr.append({"stock_name": stock, "weight_pct": round(w, 2)})
+    pa.sort(key=lambda x: -x["weight_pct"])
+    pr.sort(key=lambda x: -x["weight_pct"])
+    pc.sort(key=lambda x: -abs(x["delta"]))
+
+    funds_out.sort(key=lambda f: -(f["summary"]["added"]
+                                   + f["summary"]["removed"]
+                                   + f["summary"]["changed"]))
+
+    return jsonify({
+        "status": "ok",
+        "from_month": from_month,
+        "to_month": to_month,
+        "available_months": months_sorted,
+        "funds": funds_out,
+        "portfolio": {
+            "added": pa, "removed": pr, "changed": pc,
+            "note": "Average stock weight across your tracked funds.",
+        },
+    })
 
 
 # ---------- Admin endpoints ----------
