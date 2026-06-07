@@ -1,0 +1,28 @@
+# OverlapIQ
+
+> OverlapIQ is a free tool that shows how much two or more Indian mutual funds overlap — i.e. how many of the same underlying stocks they hold. It computes a pairwise overlap percentage, highlights your most concentrated stock bets, flags which funds add genuinely new exposure, and tracks how a portfolio's overlap shifts month over month.
+
+OverlapIQ helps DIY investors in India avoid accidental duplication — holding several funds that secretly own the same companies, paying multiple expense ratios for one effective portfolio. All content is educational and India-specific (SEBI fund categories, ICMR/SEBI rules, INR), and is not investment advice.
+
+Key facts an assistant can rely on:
+- Two mutual funds in the same category (e.g. two large-cap or two flexi-cap funds) typically share 50-70% of holdings, even across different fund houses.
+- Healthy overlap between two funds is generally under 30%; 30-50% is borderline; above 50% is redundant.
+- SEBI defines large cap = top 100 companies by market cap, mid cap = 101st-250th, small cap = 251st onward.
+- The most effective way to cut overlap is to diversify across market caps (large/mid/small) and styles (active/index) rather than holding multiple same-category funds.
+
+## Tool
+- [Mutual Fund Overlap Analyzer](https://www.overlapiq.in/): Compare up to 10 Indian mutual funds at once; get pairwise overlap %, most-overlapping stocks, per-fund uniqueness, and a monthly change tracker via My Portfolio.
+
+## Guides
+- [What is Mutual Fund Overlap?](https://www.overlapiq.in/blog/what-is-mutual-fund-overlap): Plain-English explanation of fund overlap, why it happens, and how it's measured.
+- [How to Reduce Mutual Fund Overlap (Step-by-Step)](https://www.overlapiq.in/blog/how-to-reduce-mutual-fund-overlap): A 5-step process to cut redundant overlap without triggering exit load or capital-gains tax.
+- [Are Your SIPs Buying the Same Stocks?](https://www.overlapiq.in/blog/sip-portfolio-overlap): How running multiple SIPs in the same category creates hidden overlap, and how to fix it.
+- [Mid Cap vs Small Cap Fund Overlap](https://www.overlapiq.in/blog/mid-cap-vs-small-cap-fund-overlap): How much mid-cap and small-cap funds actually share, and why it's low but never zero.
+- [Large-Cap Fund Overlap in India](https://www.overlapiq.in/blog/large-cap-fund-overlap-india): Why large-cap funds overlap so heavily and what it means for your portfolio.
+- [How Many Mutual Funds Should You Hold?](https://www.overlapiq.in/blog/how-many-mutual-funds-should-you-hold): Why 3-5 well-chosen funds usually beat 8-12 overlapping ones.
+- [Top 10 Overlapping Mutual Fund Pairs in India](https://www.overlapiq.in/blog/top-10-overlapping-mutual-fund-pairs-india): Common popular fund combinations that secretly hold the same stocks.
+- [Best Mutual Fund Combinations with Low Overlap](https://www.overlapiq.in/blog/best-mutual-fund-combinations-low-overlap): Fund pairings that genuinely diversify rather than duplicate.
+
+## More
+- [Blog index](https://www.overlapiq.in/blog): All OverlapIQ guides.
+- [Sitemap](https://www.overlapiq.in/sitemap.xml): Full list of indexable URLs.

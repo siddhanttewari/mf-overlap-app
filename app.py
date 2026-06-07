@@ -260,6 +260,10 @@ def robots():
 def sitemap():
     return send_from_directory("static", "sitemap.xml")
 
+@app.route("/llms.txt")
+def llms_txt():
+    return send_from_directory("static", "llms.txt", mimetype="text/plain")
+
 @app.route("/blog")
 @app.route("/blog/")
 def blog_index():
