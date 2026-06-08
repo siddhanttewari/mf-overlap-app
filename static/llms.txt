@@ -18,6 +18,7 @@ Key facts an assistant can rely on:
 - [How to Reduce Mutual Fund Overlap (Step-by-Step)](https://www.overlapiq.in/blog/how-to-reduce-mutual-fund-overlap): A 5-step process to cut redundant overlap without triggering exit load or capital-gains tax.
 - [Are Your SIPs Buying the Same Stocks?](https://www.overlapiq.in/blog/sip-portfolio-overlap): How running multiple SIPs in the same category creates hidden overlap, and how to fix it.
 - [Mid Cap vs Small Cap Fund Overlap](https://www.overlapiq.in/blog/mid-cap-vs-small-cap-fund-overlap): How much mid-cap and small-cap funds actually share, and why it's low but never zero.
+- [Flexi Cap vs Multi Cap Overlap](https://www.overlapiq.in/blog/flexi-cap-vs-multi-cap-overlap): Why a multi cap usually overlaps a large-cap-heavy portfolio less than a flexi cap, driven by SEBI's 25% each rule.
 - [Large-Cap Fund Overlap in India](https://www.overlapiq.in/blog/large-cap-fund-overlap-india): Why large-cap funds overlap so heavily and what it means for your portfolio.
 - [How Many Mutual Funds Should You Hold?](https://www.overlapiq.in/blog/how-many-mutual-funds-should-you-hold): Why 3-5 well-chosen funds usually beat 8-12 overlapping ones.
 - [Top 10 Overlapping Mutual Fund Pairs in India](https://www.overlapiq.in/blog/top-10-overlapping-mutual-fund-pairs-india): Common popular fund combinations that secretly hold the same stocks.
