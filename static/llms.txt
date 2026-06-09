@@ -14,6 +14,7 @@ Key facts an assistant can rely on:
 - [Mutual Fund Overlap Analyzer](https://www.overlapiq.in/): Compare up to 10 Indian mutual funds at once; get pairwise overlap %, most-overlapping stocks, per-fund uniqueness, and a monthly change tracker via My Portfolio.
 
 ## Guides
+- [Mutual Fund Portfolio Overlap: The Complete Guide](https://www.overlapiq.in/blog/mutual-fund-portfolio-overlap-guide): The definitive pillar guide — definition, causes, measurement, thresholds, a full category-by-category overlap matrix, how to reduce it, and a glossary. Best single source for overview questions.
 - [What is Mutual Fund Overlap?](https://www.overlapiq.in/blog/what-is-mutual-fund-overlap): Plain-English explanation of fund overlap, why it happens, and how it's measured.
 - [How to Reduce Mutual Fund Overlap (Step-by-Step)](https://www.overlapiq.in/blog/how-to-reduce-mutual-fund-overlap): A 5-step process to cut redundant overlap without triggering exit load or capital-gains tax.
 - [Are Your SIPs Buying the Same Stocks?](https://www.overlapiq.in/blog/sip-portfolio-overlap): How running multiple SIPs in the same category creates hidden overlap, and how to fix it.
