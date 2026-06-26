@@ -26,6 +26,13 @@ from flask_cors import CORS
 
 from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
 
+# Merge international funds into main snapshot
+try:
+    from international_funds import INTL_SCHEMES
+    SNAPSHOT_SCHEMES.update(INTL_SCHEMES)
+except ImportError:
+    pass  # international_funds.py not present, skip
+
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
