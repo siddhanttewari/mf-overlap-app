@@ -276,6 +276,11 @@ def llms_txt():
 def blog_index():
     return send_from_directory("static/blog", "index.html")
 
+@app.route("/sif")
+@app.route("/sif/")
+def sif_hub():
+    return send_from_directory("static", "sif.html")
+
 @app.route("/blog/<slug>")
 def blog_post(slug):
     return send_from_directory("static/blog", f"{slug}.html")
@@ -932,3 +937,4 @@ if __name__ == "__main__":
     print("=" * 60)
     print()
     app.run(host="0.0.0.0", port=port, debug=False)
+
