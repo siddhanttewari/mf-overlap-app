@@ -281,6 +281,11 @@ def blog_index():
 def sif_hub():
     return send_from_directory("static", "sif.html")
 
+@app.route("/gift-city")
+@app.route("/gift-city/")
+def gift_city_hub():
+    return send_from_directory("static", "gift-city.html")
+
 @app.route("/blog/<slug>")
 def blog_post(slug):
     return send_from_directory("static/blog", f"{slug}.html")
