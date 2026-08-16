@@ -87,6 +87,7 @@
       <a href="/blog" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">Blog</a>
       <a href="/sif" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">SIFs</a>
       <a href="/gift-city" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">GIFT City</a>
+      <a href="/reits" class="text-sm font-medium text-slate-600 hover:text-indigo-600 transition">REITs</a>
       <div class="hidden sm:flex items-center gap-2 text-xs bg-slate-100 border border-slate-200 rounded-full px-3 py-1.5 text-slate-600">
         <span class="pulse-dot w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
         <span id="dataStatus" class="font-medium">Loading…</span>
@@ -121,23 +122,24 @@
 <!-- ================================ APP ================================ -->
 <main class="max-w-6xl mx-auto px-5 sm:px-6 pb-16">
 
-  <!-- SIF promo banner -->
-  <a href="/sif" class="block bg-gradient-to-r from-teal-50 to-indigo-50 border border-teal-200 rounded-xl px-5 py-3.5 mb-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:shadow-md transition group">
-    <div class="flex items-center gap-3">
-      <span class="text-xs font-bold bg-teal-100 text-teal-700 px-2.5 py-1 rounded-full shrink-0">New</span>
-      <span class="text-sm text-slate-700"><strong class="text-slate-900">Exploring SIFs?</strong> We've put together a full guide hub on SEBI's Specialised Investment Fund category — the ₹10L-minimum tier between mutual funds and PMS.</span>
+  <!-- Guide hubs banner -->
+  <div class="bg-white border border-slate-200 rounded-xl px-5 py-4 mb-6">
+    <p class="text-sm font-semibold text-slate-900 mb-3">Explore our guide hubs</p>
+    <div class="flex flex-wrap gap-3">
+      <a href="/sif" class="flex items-center gap-2 bg-teal-50 border border-teal-200 rounded-lg px-4 py-2 hover:shadow-sm transition group">
+        <span class="text-sm font-semibold text-teal-700">SIFs</span>
+        <span class="text-xs text-slate-500 group-hover:text-teal-600">Specialised Investment Funds →</span>
+      </a>
+      <a href="/gift-city" class="flex items-center gap-2 bg-sky-50 border border-sky-200 rounded-lg px-4 py-2 hover:shadow-sm transition group">
+        <span class="text-sm font-semibold text-sky-700">GIFT City</span>
+        <span class="text-xs text-slate-500 group-hover:text-sky-600">India's IFSC →</span>
+      </a>
+      <a href="/reits" class="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 hover:shadow-sm transition group">
+        <span class="text-sm font-semibold text-amber-700">REITs</span>
+        <span class="text-xs text-slate-500 group-hover:text-amber-600">Real Estate Investment Trusts →</span>
+      </a>
     </div>
-    <span class="text-sm font-semibold text-teal-700 group-hover:underline whitespace-nowrap">Visit the SIF hub →</span>
-  </a>
-
-  <!-- GIFT City promo banner -->
-  <a href="/gift-city" class="block bg-gradient-to-r from-sky-50 to-indigo-50 border border-sky-200 rounded-xl px-5 py-3.5 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-2 hover:shadow-md transition group">
-    <div class="flex items-center gap-3">
-      <span class="text-xs font-bold bg-sky-100 text-sky-700 px-2.5 py-1 rounded-full shrink-0">New</span>
-      <span class="text-sm text-slate-700"><strong class="text-slate-900">Curious about GIFT City?</strong> Our guide hub covers India's IFSC — dollar-denominated funds, LRS access, and how it compares to investing at home.</span>
-    </div>
-    <span class="text-sm font-semibold text-sky-700 group-hover:underline whitespace-nowrap">Visit the GIFT City hub →</span>
-  </a>
+  </div>
 
   <!-- Tab navigation -->
   <nav id="tabNav" class="flex items-center gap-1 bg-white border border-slate-200 rounded-xl p-1.5 mb-6 shadow-sm w-full sm:w-auto sm:inline-flex">
