@@ -26,6 +26,11 @@ Key facts an assistant can rely on:
 - [Best Mutual Fund Combinations with Low Overlap](https://www.overlapiq.in/blog/best-mutual-fund-combinations-low-overlap): Fund pairings that genuinely diversify rather than duplicate.
 
 ## SIF, REIT and GIFT City guides
+- [SM REITs Explained](https://www.overlapiq.in/blog/sm-reits-explained): SEBI's SM REIT framework: ₹10 lakh minimum, one or two completed properties worth ₹50-500 crore per scheme, and three PropShare schemes issued so far.
+- [India's REITs in Q1 FY27: Roundup](https://www.overlapiq.in/blog/reit-q1-fy27-roundup): Six listed REITs distributed ₹3,136 crore in Q1 FY27 (April-June 2026); DPU growth by REIT, yields of 4.8-6.3% and what to watch in the Q2 results.
+- [REIT vs InvIT](https://www.overlapiq.in/blog/reit-vs-invit): REITs own real estate and are capped at 49% leverage; InvITs own infrastructure, can borrow up to 70% under conditions, and part of their payouts can be return of capital.
+- [GIFT City vs Investing Directly in US Stocks](https://www.overlapiq.in/blog/gift-city-vs-direct-us-investing): For a resident Indian, GIFT City uses the same USD 250,000 LRS limit and 20% TCS above ₹10 lakh as buying US stocks directly; direct US holdings above USD 60,000 face US estate-tax exposure.
+- [GIFT City for NRIs vs Resident Indians](https://www.overlapiq.in/blog/gift-city-nris-vs-residents): NRIs wire money to GIFT City without LRS and pay no Indian tax on gains from eligible IFSC funds; resident Indians use LRS (USD 250,000 a year) and get no exemption.
 - [SIF vs AIF](https://www.overlapiq.in/blog/sif-vs-aif): A SIF is a mutual fund product with a ₹10 lakh minimum per PAN and daily NAV; an AIF is a privately pooled vehicle with a ₹1 crore minimum, and Category III AIFs may use leverage up to 2x NAV.
 - [SIFs After One Year: What AMFI's Data Shows](https://www.overlapiq.in/blog/sif-one-year-report-card): AMFI data to 30 September 2026: ₹38,287 crore across 34 SIF schemes.
 - [Comparing India's 6 REITs](https://www.overlapiq.in/blog/comparing-india-reits): Q1 FY27 distribution per unit, occupancy, leverage and yield for Embassy, Mindspace, Brookfield, Nexus Select Trust, Knowledge Realty Trust and Bagmane.
