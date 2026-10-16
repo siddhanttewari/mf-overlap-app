@@ -305,6 +305,26 @@
 
     <div id="selectedSchemes" class="mt-4 flex flex-wrap gap-2"></div>
 
+    <details id="stocksPanel" class="mt-4 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-violet-50/70">
+      <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-semibold text-indigo-900">
+        <span>&#10133; Also own US or European stocks directly? <span class="font-normal text-slate-600">Add them to see what your funds already hold</span></span>
+        <span id="stocksBadge" class="hidden shrink-0 text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5"></span>
+      </summary>
+      <div class="px-4 pb-4">
+        <div class="relative">
+          <input id="stockSearch" type="text" autocomplete="off" aria-label="Search a US or European stock by ticker or name"
+            class="w-full px-4 py-3 text-sm border border-slate-200 rounded-xl outline-none bg-white placeholder:text-slate-400 focus:border-indigo-400"
+            placeholder="Ticker or name: NVDA, Microsoft, ASML, SAP.DE, Novo Nordisk, LVMH..." />
+          <div id="stockDropdown" class="hidden absolute z-20 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-xl max-h-72 overflow-y-auto"></div>
+        </div>
+        <p class="text-xs text-slate-500 mt-2 leading-relaxed">Enter how much you hold in each one (&#8377;, $ or %: use the same unit for all, only the proportions matter). Leave it blank for an equal share. Saved only in this browser.</p>
+        <div id="stockRows" class="mt-3 space-y-2"></div>
+        <div id="stockStatus" class="hidden mt-3 text-xs rounded-lg px-3 py-2"></div>
+        <div id="stockExposure" class="mt-4"></div>
+      </div>
+    </details>
+
+
     <div class="mt-6 pt-5 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">
       <span id="selectionCount" class="text-sm text-slate-500">No funds selected yet</span>
       <button id="analyzeBtn" class="btn-primary px-6 py-3 text-white font-semibold rounded-xl text-sm sm:text-base" disabled>
@@ -379,6 +399,12 @@
       <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-1">Concentrated bets</h3>
       <p class="text-xs sm:text-sm text-slate-500 mb-4">Stocks that appear in multiple funds you hold — these are your real positions, magnified.</p>
       <div id="commonHoldingsContent"></div>
+    </div>
+
+    <div id="stocksLookCard" class="card p-6 reveal hidden">
+      <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-1">Your direct stocks, inside your funds</h3>
+      <p class="text-xs sm:text-sm text-slate-500 mb-4">Which of the stocks you own directly are also held by the funds you selected, and how big they are there.</p>
+      <div id="stocksLookContent"></div>
     </div>
 
   </section>
@@ -769,6 +795,7 @@ function renderSelected() {
   selectionCountEl.textContent = arr.length === 0 ? 'No funds selected yet' :
     `${arr.length} of ${MAX_SCHEMES} selected`;
   analyzeBtn.disabled = arr.length < 2;
+  if (window.mineAfterRender) window.mineAfterRender();
   if (arr.length === 0) {
     resultsEl.classList.add('hidden');
     emptyState.classList.remove('hidden');
@@ -844,7 +871,8 @@ async function runAnalysis() {
         if (i === j) {
           matrix[i][j] = 100;
         } else {
-          const r = pairwiseOverlap(schemes[i].holdings, schemes[j].holdings);
+          const withMine = schemes[i].key === 'mine' || schemes[j].key === 'mine';
+          const r = withMine ? pairwiseOverlap(mergeClasses(schemes[i].holdings), mergeClasses(schemes[j].holdings)) : pairwiseOverlap(schemes[i].holdings, schemes[j].holdings);
           matrix[i][j] = r.overlap;
           if (i < j) allPairs.push({ i, j, schemeA: schemes[i].name, schemeB: schemes[j].name, overlap: r.overlap, common: r.common });
         }
@@ -858,6 +886,7 @@ async function runAnalysis() {
     renderMatrix(matrix, schemes, allPairs);
     renderUniqueness(matrix, schemes);
     renderCommonHoldings(schemes);
+    if (window.renderStocksLook) renderStocksLook(schemes);
 
     setTimeout(() => resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   } finally {
@@ -879,6 +908,9 @@ function renderInsights(allPairs, schemes, failed) {
   }
   if (schemes.some(s => /^-1\d{3}$/.test(String(s.key)))) {
     html += `<div class="text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded-md px-2.5 py-1.5 mb-2">🌍 International funds: we only have each fund's biggest disclosed holdings (top 10 to 40), so overlap shown is a minimum. <a href="/international#overlap" class="underline font-semibold">How to read this</a></div>`;
+  }
+  if (schemes.some(s => s.key === 'mine')) {
+    html += `<div class="text-xs text-indigo-800 bg-indigo-50 border border-indigo-200 rounded-md px-2.5 py-1.5 mb-2">📈 <strong>My direct stocks</strong> are compared with each fund's disclosed top holdings (weights are shares of your direct-stock money).</div>`;
   }
   if (failed && failed.length > 0) {
     html += `<div class="text-xs text-red-600 mb-2">⚠ Skipped ${failed.length} fund(s) without holdings data.</div>`;
@@ -1169,6 +1201,7 @@ function starSvg(filled) {
 }
 
 function starButton(fund) {
+  if (String(fund.family_id) === 'mine') return '';
   const f = isWatched(fund.family_id);
   return `<button type="button" class="watch-star inline-flex items-center justify-center rounded-lg p-1 transition ${f ? 'text-amber-400' : 'text-slate-300 hover:text-amber-400'}"
     data-fid="${escapeHtml(String(fund.family_id))}" data-name="${escapeHtml(fund.name)}" data-amc="${escapeHtml(fund.amc || '')}" data-category="${escapeHtml(fund.category || '')}"
@@ -1524,6 +1557,283 @@ function initWatchlist() {
 
 initApp();
 initWatchlist();
+</script>
+<script>
+// =====================================================================
+// MY DIRECT STOCKS: US + European stocks compared with the selected funds
+// Data: curated list of large companies (name, tickers, home country, listing currency, sector).
+// Names equal the strings used in the fund holdings so direct holdings match by name.
+// =====================================================================
+const STOCK_DB = [["NVIDIA Corp",["NVDA"],"US","USD","Technology"],["Apple Inc",["AAPL"],"US","USD","Technology"],["Microsoft Corp",["MSFT"],"US","USD","Technology"],["Broadcom Inc",["AVGO"],"US","USD","Technology"],["Micron Technology Inc",["MU"],"US","USD","Technology"],["Advanced Micro Devices Inc",["AMD"],"US","USD","Technology"],["Intel Corp",["INTC"],"US","USD","Technology"],["Palantir Technologies Inc",["PLTR"],"US","USD","Technology"],["Cisco Systems Inc",["CSCO"],"US","USD","Technology"],["Lam Research Corp",["LRCX"],"US","USD","Technology"],["Applied Materials Inc",["AMAT"],"US","USD","Technology"],["Oracle Corp",["ORCL"],"US","USD","Technology"],["Salesforce Inc",["CRM"],"US","USD","Technology"],["Adobe Inc",["ADBE"],"US","USD","Technology"],["Qualcomm Inc",["QCOM"],"US","USD","Technology"],["Texas Instruments Inc",["TXN"],"US","USD","Technology"],["Intuit Inc",["INTU"],"US","USD","Technology"],["ServiceNow Inc",["NOW"],"US","USD","Technology"],["International Business Machines Corp",["IBM"],"US","USD","Technology"],["Analog Devices Inc",["ADI"],"US","USD","Technology"],["KLA Corp",["KLAC"],"US","USD","Technology"],["Arista Networks Inc",["ANET"],"US","USD","Technology"],["Snowflake Inc",["SNOW"],"US","USD","Technology"],["Datadog Inc",["DDOG"],"US","USD","Technology"],["CrowdStrike Holdings Inc",["CRWD"],"US","USD","Technology"],["Cloudflare Inc",["NET"],"US","USD","Technology"],["Palo Alto Networks Inc",["PANW"],"US","USD","Technology"],["Synopsys Inc",["SNPS"],"US","USD","Technology"],["Cadence Design Systems Inc",["CDNS"],"US","USD","Technology"],["Tyler Technologies Inc",["TYL"],"US","USD","Technology"],["Keysight Technologies Inc",["KEYS"],"US","USD","Technology"],["Monolithic Power Systems Inc",["MPWR"],"US","USD","Technology"],["Western Digital Corp",["WDC"],"US","USD","Technology"],["Seagate Technology Holdings PLC",["STX"],"IE","USD","Technology"],["Credo Technology Group Holding Ltd",["CRDO"],"US","USD","Technology"],["CoreWeave Inc",["CRWV"],"US","USD","Technology"],["Allegro MicroSystems Inc",["ALGM"],"US","USD","Technology"],["Super Micro Computer Inc",["SMCI"],"US","USD","Technology"],["Dell Technologies Inc",["DELL"],"US","USD","Technology"],["Alphabet Inc Class A",["GOOGL"],"US","USD","Communication"],["Alphabet Inc Class C",["GOOG"],"US","USD","Communication"],["Meta Platforms Inc",["META"],"US","USD","Communication"],["Netflix Inc",["NFLX"],"US","USD","Communication"],["Walt Disney Co",["DIS"],"US","USD","Communication"],["Comcast Corp",["CMCSA"],"US","USD","Communication"],["T-Mobile US Inc",["TMUS"],"US","USD","Communication"],["Verizon Communications Inc",["VZ"],"US","USD","Communication"],["AT&T Inc",["T"],"US","USD","Communication"],["Live Nation Entertainment Inc",["LYV"],"US","USD","Communication"],["Liberty Media Corp (Formula One)",["FWONK","FWONA"],"US","USD","Communication"],["Electronic Arts Inc",["EA"],"US","USD","Communication"],["Take-Two Interactive Software Inc",["TTWO"],"US","USD","Communication"],["Reddit Inc",["RDDT"],"US","USD","Communication"],["Amazon.com Inc",["AMZN"],"US","USD","Consumer Discretionary"],["Tesla Inc",["TSLA"],"US","USD","Consumer Discretionary"],["Home Depot Inc",["HD"],"US","USD","Consumer Discretionary"],["McDonald's Corp",["MCD"],"US","USD","Consumer Discretionary"],["Nike Inc",["NKE"],"US","USD","Consumer Discretionary"],["Starbucks Corp",["SBUX"],"US","USD","Consumer Discretionary"],["Lowe's Companies Inc",["LOW"],"US","USD","Consumer Discretionary"],["Booking Holdings Inc",["BKNG"],"US","USD","Consumer Discretionary"],["TJX Companies Inc",["TJX"],"US","USD","Consumer Discretionary"],["Airbnb Inc",["ABNB"],"US","USD","Consumer Discretionary"],["Carvana Co",["CVNA"],"US","USD","Consumer Discretionary"],["Chipotle Mexican Grill Inc",["CMG"],"US","USD","Consumer Discretionary"],["Ford Motor Co",["F"],"US","USD","Consumer Discretionary"],["General Motors Co",["GM"],"US","USD","Consumer Discretionary"],["Marriott International Inc",["MAR"],"US","USD","Consumer Discretionary"],["O'Reilly Automotive Inc",["ORLY"],"US","USD","Consumer Discretionary"],["DoorDash Inc",["DASH"],"US","USD","Consumer Discretionary"],["Lululemon Athletica Inc",["LULU"],"US","USD","Consumer Discretionary"],["Walmart Inc",["WMT"],"US","USD","Consumer Staples"],["Costco Wholesale Corp",["COST"],"US","USD","Consumer Staples"],["Procter & Gamble Co",["PG"],"US","USD","Consumer Staples"],["Coca-Cola Co",["KO"],"US","USD","Consumer Staples"],["PepsiCo Inc",["PEP"],"US","USD","Consumer Staples"],["Philip Morris International Inc",["PM"],"US","USD","Consumer Staples"],["Mondelez International Inc",["MDLZ"],"US","USD","Consumer Staples"],["Colgate-Palmolive Co",["CL"],"US","USD","Consumer Staples"],["Altria Group Inc",["MO"],"US","USD","Consumer Staples"],["Estee Lauder Companies Inc",["EL"],"US","USD","Consumer Staples"],["Constellation Brands Inc",["STZ"],"US","USD","Consumer Staples"],["Clorox Co",["CLX"],"US","USD","Consumer Staples"],["Hershey Co",["HSY"],"US","USD","Consumer Staples"],["Brown-Forman Corp",["BF-B","BF.B"],"US","USD","Consumer Staples"],["Kraft Heinz Co",["KHC"],"US","USD","Consumer Staples"],["Target Corp",["TGT"],"US","USD","Consumer Staples"],["Eli Lilly and Co",["LLY"],"US","USD","Health Care"],["Johnson & Johnson",["JNJ"],"US","USD","Health Care"],["UnitedHealth Group Inc",["UNH"],"US","USD","Health Care"],["AbbVie Inc",["ABBV"],"US","USD","Health Care"],["Merck & Co Inc",["MRK"],"US","USD","Health Care"],["Pfizer Inc",["PFE"],"US","USD","Health Care"],["Thermo Fisher Scientific Inc",["TMO"],"US","USD","Health Care"],["Abbott Laboratories",["ABT"],"US","USD","Health Care"],["Danaher Corp",["DHR"],"US","USD","Health Care"],["Amgen Inc",["AMGN"],"US","USD","Health Care"],["Intuitive Surgical Inc",["ISRG"],"US","USD","Health Care"],["Gilead Sciences Inc",["GILD"],"US","USD","Health Care"],["Vertex Pharmaceuticals Inc",["VRTX"],"US","USD","Health Care"],["Zoetis Inc",["ZTS"],"US","USD","Health Care"],["Zimmer Biomet Holdings Inc",["ZBH"],"US","USD","Health Care"],["GE HealthCare Technologies Inc",["GEHC"],"US","USD","Health Care"],["Bristol-Myers Squibb Co",["BMY"],"US","USD","Health Care"],["Regeneron Pharmaceuticals Inc",["REGN"],"US","USD","Health Care"],["Medtronic PLC",["MDT"],"IE","USD","Health Care"],["Berkshire Hathaway Inc",["BRK-B","BRK.B","BRK-A"],"US","USD","Financials"],["JPMorgan Chase & Co",["JPM"],"US","USD","Financials"],["Visa Inc",["V"],"US","USD","Financials"],["Mastercard Inc",["MA"],"US","USD","Financials"],["Bank of America Corp",["BAC"],"US","USD","Financials"],["Wells Fargo & Co",["WFC"],"US","USD","Financials"],["Goldman Sachs Group Inc",["GS"],"US","USD","Financials"],["Morgan Stanley",["MS"],"US","USD","Financials"],["Citigroup Inc",["C"],"US","USD","Financials"],["American Express Co",["AXP"],"US","USD","Financials"],["Charles Schwab Corp",["SCHW"],"US","USD","Financials"],["BlackRock Inc",["BLK"],"US","USD","Financials"],["S&P Global Inc",["SPGI"],"US","USD","Financials"],["LPL Financial Holdings Inc",["LPLA"],"US","USD","Financials"],["Pinnacle Financial Partners Inc",["PNFP"],"US","USD","Financials"],["Western Alliance Bancorporation",["WAL"],"US","USD","Financials"],["Equitable Holdings Inc",["EQH"],"US","USD","Financials"],["PayPal Holdings Inc",["PYPL"],"US","USD","Financials"],["Coinbase Global Inc",["COIN"],"US","USD","Financials"],["Robinhood Markets Inc",["HOOD"],"US","USD","Financials"],["GE Aerospace",["GE"],"US","USD","Industrials"],["GE Vernova Inc",["GEV"],"US","USD","Industrials"],["Caterpillar Inc",["CAT"],"US","USD","Industrials"],["RTX Corp",["RTX"],"US","USD","Industrials"],["Honeywell International Inc",["HON"],"US","USD","Industrials"],["Boeing Co",["BA"],"US","USD","Industrials"],["Lockheed Martin Corp",["LMT"],"US","USD","Industrials"],["Union Pacific Corp",["UNP"],"US","USD","Industrials"],["Deere & Co",["DE"],"US","USD","Industrials"],["Uber Technologies Inc",["UBER"],"US","USD","Industrials"],["Quanta Services Inc",["PWR"],"US","USD","Industrials"],["Howmet Aerospace Inc",["HWM"],"US","USD","Industrials"],["Copart Inc",["CPRT"],"US","USD","Industrials"],["Otis Worldwide Corp",["OTIS"],"US","USD","Industrials"],["Masco Corp",["MAS"],"US","USD","Industrials"],["Broadridge Financial Solutions Inc",["BR"],"US","USD","Industrials"],["Sterling Infrastructure Inc",["STRL"],"US","USD","Industrials"],["Carpenter Technology Corp",["CRS"],"US","USD","Industrials"],["Modine Manufacturing Co",["MOD"],"US","USD","Industrials"],["Bloom Energy Corp",["BE"],"US","USD","Industrials"],["Vertiv Holdings Co",["VRT"],"US","USD","Industrials"],["Eaton Corp PLC",["ETN"],"IE","USD","Industrials"],["Exxon Mobil Corp",["XOM"],"US","USD","Energy"],["Chevron Corp",["CVX"],"US","USD","Energy"],["ConocoPhillips",["COP"],"US","USD","Energy"],["Schlumberger NV",["SLB"],"US","USD","Energy"],["Freeport-McMoRan Inc",["FCX"],"US","USD","Materials"],["Newmont Corp",["NEM"],"US","USD","Materials"],["NextEra Energy Inc",["NEE"],"US","USD","Utilities"],["First Solar Inc",["FSLR"],"US","USD","Technology"],["Southern Co",["SO"],"US","USD","Utilities"],["Duke Energy Corp",["DUK"],"US","USD","Utilities"],["Constellation Energy Corp",["CEG"],"US","USD","Utilities"],["Vistra Corp",["VST"],"US","USD","Utilities"],["Prologis Inc",["PLD"],"US","USD","Real Estate"],["American Tower Corp",["AMT"],"US","USD","Real Estate"],["Equinix Inc",["EQIX"],"US","USD","Real Estate"],["Realty Income Corp",["O"],"US","USD","Real Estate"],["Space Exploration Technologies Corp",[],"US","USD","Industrials"],["ASML Holding NV",["ASML","ASML.AS"],"NL","EUR","Technology"],["Adyen NV",["ADYEN.AS"],"NL","EUR","Financials"],["Prosus NV",["PRX.AS"],"NL","EUR","Consumer Discretionary"],["ING Groep NV",["INGA.AS"],"NL","EUR","Financials"],["Heineken NV",["HEIA.AS"],"NL","EUR","Consumer Staples"],["Nebius Group NV",["NBIS"],"NL","USD","Technology"],["Anheuser-Busch InBev SA/NV",["ABI.BR"],"BE","EUR","Consumer Staples"],["Ryanair Holdings PLC",["RYA.IR"],"IE","EUR","Industrials"],["CRH PLC",["CRH"],"IE","USD","Materials"],["SAP SE",["SAP","SAP.DE"],"DE","EUR","Technology"],["Rheinmetall AG",["RHM.DE"],"DE","EUR","Industrials"],["Siemens AG",["SIE.DE"],"DE","EUR","Industrials"],["Siemens Energy AG",["ENR.DE"],"DE","EUR","Industrials"],["Siemens Healthineers AG",["SHL.DE"],"DE","EUR","Health Care"],["Allianz SE",["ALV.DE"],"DE","EUR","Financials"],["Deutsche Telekom AG",["DTE.DE"],"DE","EUR","Communication"],["Mercedes-Benz Group AG",["MBG.DE"],"DE","EUR","Consumer Discretionary"],["BMW AG",["BMW.DE"],"DE","EUR","Consumer Discretionary"],["Volkswagen AG",["VOW3.DE"],"DE","EUR","Consumer Discretionary"],["Infineon Technologies AG",["IFX.DE"],"DE","EUR","Technology"],["Munich Re",["MUV2.DE"],"DE","EUR","Financials"],["Deutsche Bank AG",["DBK.DE"],"DE","EUR","Financials"],["Adidas AG",["ADS.DE"],"DE","EUR","Consumer Discretionary"],["BASF SE",["BAS.DE"],"DE","EUR","Materials"],["DHL Group",["DHL.DE"],"DE","EUR","Industrials"],["Bayer AG",["BAYN.DE"],"DE","EUR","Health Care"],["Merck KGaA",["MRK.DE"],"DE","EUR","Health Care"],["LVMH Moet Hennessy Louis Vuitton SE",["MC.PA","LVMUY"],"FR","EUR","Consumer Discretionary"],["BNP Paribas SA",["BNP.PA"],"FR","EUR","Financials"],["Hermes International",["RMS.PA"],"FR","EUR","Consumer Discretionary"],["L'Oreal SA",["OR.PA"],"FR","EUR","Consumer Staples"],["Airbus SE",["AIR.PA"],"FR","EUR","Industrials"],["TotalEnergies SE",["TTE.PA","TTE"],"FR","EUR","Energy"],["Sanofi SA",["SAN.PA","SNY"],"FR","EUR","Health Care"],["Schneider Electric SE",["SU.PA"],"FR","EUR","Industrials"],["Air Liquide SA",["AI.PA"],"FR","EUR","Materials"],["Safran SA",["SAF.PA"],"FR","EUR","Industrials"],["EssilorLuxottica SA",["EL.PA"],"FR","EUR","Health Care"],["AXA SA",["CS.PA"],"FR","EUR","Financials"],["Kering SA",["KER.PA"],"FR","EUR","Consumer Discretionary"],["Dassault Systemes SE",["DSY.PA"],"FR","EUR","Technology"],["Capgemini SE",["CAP.PA"],"FR","EUR","Technology"],["Industria de Diseno Textil SA",["ITX.MC"],"ES","EUR","Consumer Discretionary"],["Iberdrola SA",["IBE.MC"],"ES","EUR","Utilities"],["Banco Santander SA",["SAN.MC","SAN"],"ES","EUR","Financials"],["Banco Bilbao Vizcaya Argentaria SA",["BBVA.MC","BBVA"],"ES","EUR","Financials"],["Enel SpA",["ENEL.MI"],"IT","EUR","Utilities"],["Ferrari NV",["RACE","RACE.MI"],"IT","EUR","Consumer Discretionary"],["Moncler SpA",["MONC.MI"],"IT","EUR","Consumer Discretionary"],["Intesa Sanpaolo SpA",["ISP.MI"],"IT","EUR","Financials"],["UniCredit SpA",["UCG.MI"],"IT","EUR","Financials"],["Nestle SA",["NESN.SW"],"CH","CHF","Consumer Staples"],["Novartis AG",["NOVN.SW","NVS"],"CH","CHF","Health Care"],["Roche Holding AG",["ROG.SW"],"CH","CHF","Health Care"],["UBS Group AG",["UBSG.SW","UBS"],"CH","CHF","Financials"],["Zurich Insurance Group AG",["ZURN.SW"],"CH","CHF","Financials"],["ABB Ltd",["ABBN.SW","ABBNY"],"CH","CHF","Industrials"],["Cie Financiere Richemont SA",["CFR.SW"],"CH","CHF","Consumer Discretionary"],["Galderma Group AG",["GALD.SW"],"CH","CHF","Health Care"],["Lonza Group AG",["LONN.SW"],"CH","CHF","Health Care"],["Givaudan SA",["GIVN.SW"],"CH","CHF","Materials"],["Sika AG",["SIKA.SW"],"CH","CHF","Materials"],["Holcim AG",["HOLN.SW"],"CH","CHF","Materials"],["AstraZeneca PLC",["AZN.L","AZN"],"GB","GBP","Health Care"],["Shell PLC",["SHEL.L","SHEL"],"GB","GBP","Energy"],["HSBC Holdings PLC",["HSBA.L","HSBC"],"GB","GBP","Financials"],["Unilever PLC",["ULVR.L","UL"],"GB","GBP","Consumer Staples"],["BP PLC",["BP.L","BP"],"GB","GBP","Energy"],["Diageo PLC",["DGE.L","DEO"],"GB","GBP","Consumer Staples"],["GSK PLC",["GSK.L","GSK"],"GB","GBP","Health Care"],["Rio Tinto PLC",["RIO.L","RIO"],"GB","GBP","Materials"],["British American Tobacco PLC",["BATS.L","BTI"],"GB","GBP","Consumer Staples"],["RELX PLC",["REL.L","RELX"],"GB","GBP","Industrials"],["London Stock Exchange Group PLC",["LSEG.L"],"GB","GBP","Financials"],["Barclays PLC",["BARC.L","BCS"],"GB","GBP","Financials"],["Lloyds Banking Group PLC",["LLOY.L"],"GB","GBP","Financials"],["Rolls-Royce Holdings PLC",["RR.L"],"GB","GBP","Industrials"],["BAE Systems PLC",["BA.L"],"GB","GBP","Industrials"],["Compass Group PLC",["CPG.L"],"GB","GBP","Consumer Discretionary"],["National Grid PLC",["NG.L","NGG"],"GB","GBP","Utilities"],["Arm Holdings PLC",["ARM"],"GB","USD","Technology"],["Novo Nordisk A/S",["NOVO-B.CO","NVO"],"DK","DKK","Health Care"],["Vestas Wind Systems A/S",["VWS.CO"],"DK","DKK","Industrials"],["Spotify Technology SA",["SPOT"],"SE","USD","Communication"],["Atlas Copco AB",["ATCO-A.ST"],"SE","SEK","Industrials"],["Investor AB",["INVE-B.ST"],"SE","SEK","Financials"],["Telefonaktiebolaget LM Ericsson",["ERIC-B.ST","ERIC"],"SE","SEK","Technology"],["Volvo AB",["VOLV-B.ST"],"SE","SEK","Industrials"],["Equinor ASA",["EQNR.OL","EQNR"],"NO","NOK","Energy"],["Nokia Oyj",["NOKIA.HE","NOK"],"FI","EUR","Technology"],["Taiwan Semiconductor Manufacturing Co Ltd",["TSM","2330.TW"],"TW","USD","Technology"],["Alibaba Group Holding Ltd",["BABA"],"CN","USD","Consumer Discretionary"]];
+const COUNTRY_NAMES = {"US": "United States", "GB": "United Kingdom", "DE": "Germany", "FR": "France", "NL": "Netherlands", "CH": "Switzerland", "DK": "Denmark", "ES": "Spain", "IT": "Italy", "SE": "Sweden", "NO": "Norway", "FI": "Finland", "BE": "Belgium", "IE": "Ireland", "TW": "Taiwan", "CN": "China"};
+const STOCK_ALT = {
+  'Alphabet Inc Class A': 'google', 'Alphabet Inc Class C': 'google', 'Meta Platforms Inc': 'facebook instagram',
+  'Taiwan Semiconductor Manufacturing Co Ltd': 'tsmc', 'Industria de Diseno Textil SA': 'inditex zara', 'Coca-Cola Co': 'coke coca cola',
+  'Space Exploration Technologies Corp': 'spacex space x', 'Berkshire Hathaway Inc': 'buffett', 'JPMorgan Chase & Co': 'jp morgan',
+  'LVMH Moet Hennessy Louis Vuitton SE': 'louis vuitton moet hennessy', 'Cie Financiere Richemont SA': 'richemont cartier',
+  'Amazon.com Inc': 'amazon', 'Walt Disney Co': 'disney', "McDonald's Corp": 'mcdonalds', "L'Oreal SA": 'loreal',
+  'Nestle SA': 'nestle', 'GE Aerospace': 'general electric', 'Novo Nordisk A/S': 'ozempic wegovy', 'Eli Lilly and Co': 'lilly',
+};
+const MINE_KEY = 'mine';
+const MINE_STORE = 'overlapiq_direct_stocks_v1';
+const CLASS_MERGE = { 'Alphabet Inc Class C': 'Alphabet Inc Class A' };   // two share classes of one company
+let mineItems = [];   // {name, tickers[], cc, ccy, sector, amount (string), other?}
+
+function mergeClasses(h) {
+  const o = {};
+  for (const [k, v] of Object.entries(h || {})) { const kk = CLASS_MERGE[k] || k; o[kk] = (o[kk] || 0) + v; }
+  return o;
+}
+function sNorm(x) { return String(x).toLowerCase().replace(/[^a-z0-9.\-& ]+/g, '').replace(/\s+/g, ' ').trim(); }
+const STOCK_INDEX = STOCK_DB.map(r => ({ r, tick: r[1].map(t => t.toLowerCase()), name: sNorm(r[0]), alt: sNorm(STOCK_ALT[r[0]] || '') }));
+
+function stockMatches(q) {
+  const n = sNorm(q);
+  if (!n) return [];
+  const have = new Set(mineItems.map(i => i.name));
+  const out = [];
+  for (const e of STOCK_INDEX) {
+    if (have.has(e.r[0])) continue;
+    let sc = 99;
+    if (e.tick.includes(n)) sc = 0;
+    else if (e.tick.some(t => t.startsWith(n))) sc = 1;
+    else if (e.name.startsWith(n)) sc = 2;
+    else if (e.name.split(' ').some(w => w.startsWith(n)) || e.alt.split(' ').some(w => w.startsWith(n))) sc = 3;
+    else if (n.length >= 3 && (e.name.includes(n) || e.alt.includes(n))) sc = 4;
+    if (sc < 99) out.push({ sc, r: e.r });
+  }
+  out.sort((a, b) => a.sc - b.sc || a.r[0].localeCompare(b.r[0]));
+  return out.slice(0, 8).map(x => x.r);
+}
+
+function mineWeights() {
+  // effective weight of each item in % of the direct-stock portfolio; blank amount = average of the filled ones (or 1)
+  const filled = mineItems.map(i => parseFloat(i.amount)).filter(v => isFinite(v) && v > 0);
+  const fill = filled.length ? filled.reduce((a, b) => a + b, 0) / filled.length : 1;
+  const raw = mineItems.map(i => { const v = parseFloat(i.amount); return i.amount === '' || i.amount == null ? fill : (isFinite(v) && v > 0 ? v : 0); });
+  const tot = raw.reduce((a, b) => a + b, 0);
+  return raw.map(v => tot > 0 ? (v / tot) * 100 : 0);
+}
+function mineHoldings() {
+  const w = mineWeights(), h = {};
+  mineItems.forEach((it, i) => { if (w[i] > 0) { const k = CLASS_MERGE[it.name] || it.name; h[k] = (h[k] || 0) + w[i]; } });
+  return h;
+}
+function minePersist() { try { localStorage.setItem(MINE_STORE, JSON.stringify(mineItems)); } catch (e) {} }
+function mineRestore() {
+  try {
+    const raw = localStorage.getItem(MINE_STORE);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (Array.isArray(arr)) mineItems = arr.filter(x => x && typeof x.name === 'string').slice(0, 40);
+  } catch (e) {}
+}
+
+function syncMine(opts) {
+  minePersist();
+  const h = mineHoldings();
+  const n = Object.keys(h).length;
+  if (n > 0) {
+    HOLDINGS[MINE_KEY] = h;
+    HOLDINGS_META[MINE_KEY] = {};
+    SCHEMES[MINE_KEY] = { family_id: MINE_KEY, name: 'My direct stocks (' + mineItems.filter((it, i) => mineWeights()[i] > 0).length + ')', amc: '', category: 'Direct US / Europe stocks' };
+    if (!selected.has(MINE_KEY) && !(opts && opts.keepOut)) {
+      if (selected.size >= MAX_SCHEMES) { alert('You can select up to ' + MAX_SCHEMES + ' items. Remove a fund first.'); }
+      else selected.add(MINE_KEY);
+    }
+  } else {
+    selected.delete(MINE_KEY);
+    delete HOLDINGS[MINE_KEY]; delete SCHEMES[MINE_KEY];
+  }
+  renderSelected();
+}
+
+function stockMeta(it) {
+  const parts = [];
+  if (it.tickers && it.tickers.length) parts.push(it.tickers[0]);
+  parts.push(it.other ? 'not in our list' : (COUNTRY_NAMES[it.cc] || it.cc));
+  if (it.sector && !it.other) parts.push(it.sector);
+  return parts.join(' · ');
+}
+
+function renderMineRows() {
+  const box = document.getElementById('stockRows');
+  const w = mineWeights();
+  box.innerHTML = mineItems.map((it, i) => `
+    <div class="flex flex-wrap items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2" data-i="${i}">
+      <div class="min-w-0 flex-1 basis-40">
+        <div class="text-sm font-semibold text-slate-900 truncate">${escapeHtml(it.name)}</div>
+        <div class="text-xs text-slate-500 truncate">${escapeHtml(stockMeta(it))}</div>
+      </div>
+      <input type="number" min="0" step="any" inputmode="decimal" class="stock-amt w-24 px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none focus:border-indigo-400" placeholder="equal" value="${escapeHtml(it.amount == null ? '' : it.amount)}" aria-label="Amount held in ${escapeHtml(it.name)}" />
+      <span class="stock-pct text-xs text-slate-500 w-12 text-right tabular-nums">${w[i].toFixed(1)}%</span>
+      <button type="button" class="stock-rm text-slate-400 hover:text-red-600 text-xl leading-none px-1" aria-label="Remove ${escapeHtml(it.name)}" title="Remove">&times;</button>
+    </div>`).join('');
+  box.querySelectorAll('.stock-rm').forEach(b => b.addEventListener('click', () => {
+    const i = +b.closest('[data-i]').dataset.i; mineItems.splice(i, 1); renderMineRows(); syncMine(); renderMineExposure();
+  }));
+  box.querySelectorAll('.stock-amt').forEach(inp => inp.addEventListener('input', () => {
+    const row = inp.closest('[data-i]'); const i = +row.dataset.i;
+    mineItems[i].amount = inp.value.trim();
+    const ww = mineWeights();
+    box.querySelectorAll('[data-i]').forEach((r, k) => { r.querySelector('.stock-pct').textContent = ww[k].toFixed(1) + '%'; });
+    minePersist();
+    if (selected.has(MINE_KEY)) { HOLDINGS[MINE_KEY] = mineHoldings(); }
+    renderMineExposure();
+  }));
+}
+
+function barBlock(title, map) {
+  const rows = Object.entries(map).sort((a, b) => b[1] - a[1]);
+  const top = rows.slice(0, 6), rest = rows.slice(6).reduce((s, r) => s + r[1], 0);
+  if (rest > 0.05) top.push(['Others', rest]);
+  return `<div class="min-w-0"><div class="text-xs font-semibold text-slate-700 mb-2">${title}</div>` + top.map(([k, v]) => `
+    <div class="mb-1.5"><div class="flex justify-between text-xs text-slate-600 gap-2"><span class="truncate">${escapeHtml(k)}</span><span class="tabular-nums">${v.toFixed(0)}%</span></div>
+    <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-2 rounded-full bg-gradient-to-r from-indigo-500 to-violet-500" style="width:${Math.max(2, v)}%"></div></div></div>`).join('') + '</div>';
+}
+
+function renderMineExposure() {
+  const el = document.getElementById('stockExposure');
+  const badge = document.getElementById('stocksBadge');
+  if (!mineItems.length) { el.innerHTML = ''; badge.classList.add('hidden'); renderMineStatus(); return; }
+  badge.textContent = mineItems.length + (mineItems.length === 1 ? ' stock' : ' stocks');
+  badge.classList.remove('hidden');
+  const w = mineWeights();
+  const C = {}, S = {}, K = {};
+  mineItems.forEach((it, i) => {
+    const c = it.other ? 'Unclassified' : (COUNTRY_NAMES[it.cc] || it.cc);
+    const s = it.other ? 'Unclassified' : it.sector;
+    const k = it.other || !it.ccy ? 'Unclassified' : it.ccy;
+    C[c] = (C[c] || 0) + w[i]; S[s] = (S[s] || 0) + w[i]; K[k] = (K[k] || 0) + w[i];
+  });
+  const order = w.map((v, i) => [v, i]).sort((a, b) => b[0] - a[0]);
+  const top3 = order.slice(0, 3).reduce((s, x) => s + x[0], 0);
+  const topC = Object.entries(C).sort((a, b) => b[1] - a[1])[0];
+  const notes = [];
+  notes.push(`<strong>${topC[1].toFixed(0)}%</strong> of your direct stocks are in <strong>${escapeHtml(topC[0])}</strong>.`);
+  if (mineItems.length >= 3) notes.push(`Your top 3 holdings make up <strong>${top3.toFixed(0)}%</strong>.`);
+  const usd = K.USD || 0;
+  if (usd >= 60) notes.push(`<strong>${usd.toFixed(0)}%</strong> is priced in US dollars, so the rupee-dollar rate moves most of your result.`);
+  el.innerHTML = `
+    <div class="rounded-xl bg-white border border-slate-200 p-4">
+      <div class="text-sm font-bold text-slate-900 mb-1">Where your direct stocks sit</div>
+      <p class="text-xs text-slate-600 mb-3 leading-relaxed">${notes.join(' ')}</p>
+      <div class="grid sm:grid-cols-3 gap-4">${barBlock('By country', C)}${barBlock('By sector', S)}${barBlock('By currency', K)}</div>
+      <p class="text-[11px] text-slate-400 mt-3">Country = company home country, currency = listing currency, sector = our simplified grouping.</p>
+    </div>`;
+  renderMineStatus();
+}
+
+function renderMineStatus() {
+  const el = document.getElementById('stockStatus');
+  if (!el) return;
+  if (!mineItems.length) { el.classList.add('hidden'); return; }
+  el.classList.remove('hidden');
+  if (selected.has(MINE_KEY)) {
+    el.className = 'mt-3 text-xs rounded-lg px-3 py-2 bg-emerald-50 border border-emerald-200 text-emerald-800';
+    el.innerHTML = selected.size >= 2 ? '&#10003; Included in the comparison. Press <strong>Analyze Overlap</strong> to run it.' : '&#10003; Included in the comparison. Add at least one fund above, then press <strong>Analyze Overlap</strong>.';
+  } else {
+    el.className = 'mt-3 text-xs rounded-lg px-3 py-2 bg-slate-50 border border-slate-200 text-slate-700 flex items-center justify-between gap-2 flex-wrap';
+    el.innerHTML = '<span>Your stocks are not in the comparison right now.</span><button type="button" id="stockInclude" class="font-semibold text-indigo-700 underline">Include them</button>';
+    document.getElementById('stockInclude').addEventListener('click', () => syncMine());
+  }
+}
+
+window.mineAfterRender = function () {
+  const b = document.getElementById('stocksBadge');
+  if (b) renderMineStatus();
+};
+
+function addStock(r) {
+  if (mineItems.length >= 40) { alert('You can add up to 40 stocks.'); return; }
+  mineItems.push({ name: r[0], tickers: r[1], cc: r[2], ccy: r[3], sector: r[4], amount: '' });
+  document.getElementById('stockSearch').value = '';
+  document.getElementById('stockDropdown').classList.add('hidden');
+  renderMineRows(); syncMine(); renderMineExposure();
+  try { if (typeof gtag === 'function') gtag('event', 'direct_stock_added', { ticker: (r[1][0] || r[0]).slice(0, 20) }); } catch (e) {}
+}
+function addOtherStock(text) {
+  const t = text.trim().slice(0, 40);
+  if (!t) return;
+  mineItems.push({ name: t, tickers: [], cc: '??', ccy: '', sector: 'Unclassified', amount: '', other: true });
+  document.getElementById('stockSearch').value = '';
+  document.getElementById('stockDropdown').classList.add('hidden');
+  renderMineRows(); syncMine(); renderMineExposure();
+}
+
+(function initStocks() {
+  const inp = document.getElementById('stockSearch'), dd = document.getElementById('stockDropdown');
+  if (!inp) return;
+  let cur = [];
+  function show() {
+    const q = inp.value.trim();
+    if (!q) { dd.classList.add('hidden'); return; }
+    cur = stockMatches(q);
+    if (!cur.length) {
+      dd.innerHTML = `<div class="px-4 py-3 text-sm text-slate-600">Not in our list of large US and European stocks yet.</div>
+        <button type="button" id="stockOther" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 border-t border-slate-100">Add &ldquo;${escapeHtml(q)}&rdquo; anyway (counts in your totals, cannot be matched to funds)</button>`;
+      dd.classList.remove('hidden');
+      document.getElementById('stockOther').addEventListener('click', () => addOtherStock(q));
+      return;
+    }
+    dd.innerHTML = cur.map((r, i) => `
+      <div class="stock-opt px-4 py-2.5 cursor-pointer border-b border-slate-100 last:border-0 hover:bg-indigo-50" data-i="${i}">
+        <div class="flex items-center justify-between gap-2">
+          <div class="min-w-0"><div class="text-sm font-medium text-slate-900 truncate">${escapeHtml(r[0])}</div>
+          <div class="text-xs text-slate-500 truncate">${escapeHtml(r[1][0] || 'ticker n/a')} · ${escapeHtml(COUNTRY_NAMES[r[2]] || r[2])} · ${escapeHtml(r[4])}</div></div>
+          <span class="shrink-0 text-indigo-600 text-xs font-semibold">+ Add</span>
+        </div></div>`).join('');
+    dd.classList.remove('hidden');
+    dd.querySelectorAll('.stock-opt').forEach(o => o.addEventListener('click', () => addStock(cur[+o.dataset.i])));
+  }
+  inp.addEventListener('input', show);
+  inp.addEventListener('focus', show);
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); if (cur.length) addStock(cur[0]); else if (inp.value.trim()) addOtherStock(inp.value); }
+    if (e.key === 'Escape') dd.classList.add('hidden');
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('#stockSearch') && !e.target.closest('#stockDropdown')) dd.classList.add('hidden'); });
+  mineRestore();
+  if (mineItems.length) { document.getElementById('stocksPanel').open = true; renderMineRows(); renderMineExposure(); }
+  if (new URLSearchParams(window.location.search).get('stocks') === '1') document.getElementById('stocksPanel').open = true;
+})();
+
+// ---- results card: your stocks vs the funds you selected ----
+window.renderStocksLook = function (schemes) {
+  const card = document.getElementById('stocksLookCard');
+  const box = document.getElementById('stocksLookContent');
+  const mine = schemes.find(s => s.key === MINE_KEY);
+  if (!mine) { card.classList.add('hidden'); return; }
+  const funds = schemes.filter(s => s.key !== MINE_KEY);
+  const fh = funds.map(f => ({ f, h: mergeClasses(f.holdings) }));
+  const w = mineWeights();
+  const rows = mineItems.map((it, i) => {
+    const key = CLASS_MERGE[it.name] || it.name;
+    const inFunds = it.other ? [] : fh.filter(x => x.h[key] != null).map(x => ({ name: x.f.name, wt: x.h[key] }));
+    return { it, w: w[i], inFunds };
+  }).filter(r => r.w > 0).sort((a, b) => b.w - a.w);
+  const covered = rows.filter(r => r.inFunds.length).reduce((s, r) => s + r.w, 0);
+  const dbl = rows.filter(r => r.inFunds.length).sort((a, b) => b.w - a.w)[0];
+  let html = `<p class="text-sm text-slate-700 mb-3"><strong>${covered.toFixed(0)}%</strong> of your direct-stock money is in companies that at least one of your selected funds also holds among its disclosed top holdings.`;
+  if (dbl) {
+    const best = dbl.inFunds.slice().sort((a, b) => b.wt - a.wt)[0];
+    html += ` Biggest double-up: <strong>${escapeHtml(dbl.it.name)}</strong> (${dbl.w.toFixed(0)}% of your stocks), which is also ${best.wt.toFixed(1)}% of ${escapeHtml(best.name)}.`;
+  } else {
+    html += ' None of your direct stocks appear in the disclosed top holdings of these funds, so they add something different.';
+  }
+  html += '</p><div class="space-y-2">';
+  for (const r of rows) {
+    const chips = r.inFunds.length
+      ? r.inFunds.sort((a, b) => b.wt - a.wt).map(x => `<span class="inline-block bg-amber-50 border border-amber-200 text-amber-900 rounded-full px-2 py-0.5 text-xs">${escapeHtml(shortName(x.name, 5))} ${x.wt.toFixed(1)}%</span>`).join(' ')
+      : `<span class="text-xs text-slate-400">${r.it.other ? 'Not in our list, so not matched' : 'Not in these funds&rsquo; disclosed top holdings'}</span>`;
+    html += `<div class="flex flex-wrap items-center gap-x-3 gap-y-1 border-b border-slate-100 pb-2">
+      <div class="min-w-0 basis-48 flex-1"><div class="text-sm font-semibold text-slate-900 truncate">${escapeHtml(r.it.name)}</div><div class="text-xs text-slate-500">${r.w.toFixed(1)}% of your direct stocks</div></div>
+      <div class="flex flex-wrap gap-1.5 flex-[2] min-w-0">${chips}</div></div>`;
+  }
+  html += `</div><p class="text-xs text-slate-500 mt-3 leading-relaxed">We only hold each fund&rsquo;s biggest disclosed holdings, so a stock marked &ldquo;not in these funds&rdquo; can still sit lower down. Fund percentages are of that fund; yours are of your direct stocks. To see your true total in a stock, multiply each by how much money sits in it.</p>`;
+  box.innerHTML = html;
+  card.classList.remove('hidden');
+};
 </script>
 <script>
 (function() {
