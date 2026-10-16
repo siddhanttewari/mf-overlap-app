@@ -27,6 +27,8 @@ Key facts an assistant can rely on:
 
 ## International investing
 - [International Investing Hub](https://www.overlapiq.in/international): International investing from India explained simply (checked 16 Oct 2026): US S&P 500 and Nasdaq-100, world index (MSCI ACWI is 64.21% US, MSCI World 72.94%), emerging markets (Taiwan 28.94%, South Korea 21.40%, China 19.80%, India 10.65%), the four doors in (Indian international funds, international ETFs, direct LRS investing, GIFT City), why most Indian international funds are closed to new money (USD 7 billion cap; 4 listed as open or reopening on 25 Sep 2026), the September 2026 ETF premium spike, and the overlap trap.
+- [Which International Fund Should You Buy? A Simple 3-Step Guide](https://www.overlapiq.in/blog/which-international-fund-should-i-buy): Pick the basket (world, US, emerging markets, region), pick an open door (Indian funds are mostly closed; NSE ETFs need a premium check; LRS apps; GIFT City), then run premium, overlap and cost checks. Oct 2026 data.
+- [Vested vs INDmoney vs Interactive Brokers](https://www.overlapiq.in/blog/vested-vs-indmoney-vs-ibkr): Brokerage (Vested 0.25% Basic or 0.15% Premium max USD 35; INDmoney 0.25% max USD 25; IBKR USD 0.005 a share, USD 1 minimum), currency conversion, products and the shared tax rules, from each company's pages, 16 Oct 2026.
 - [Your International Diversification Is Probably Just 5 US Tech Stocks](https://www.overlapiq.in/blog/international-diversification-myth): A blended Nasdaq-100, S&P 500 and world-index portfolio holds about 35% in five groups of US mega-caps; refreshed Oct 2026.
 
 ## SIF, REIT and GIFT City guides

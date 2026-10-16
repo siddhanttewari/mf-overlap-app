@@ -126,6 +126,7 @@
   /* Search input glow on focus */
   #schemeSearch:focus { box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.12), 0 1px 3px rgba(15,23,42,0.06); }
 </style>
+<script defer src="/js/track.js?v=1"></script>
 </head>
 <body class="text-slate-800">
 
@@ -305,7 +306,7 @@
 
     <div id="selectedSchemes" class="mt-4 flex flex-wrap gap-2"></div>
 
-    <details id="stocksPanel" class="mt-4 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-violet-50/70">
+    <details id="stocksPanel" data-track-name="direct_stocks" class="mt-4 rounded-xl border border-indigo-200 bg-gradient-to-br from-indigo-50/70 to-violet-50/70">
       <summary class="cursor-pointer select-none px-4 py-3 flex items-center justify-between gap-3 text-sm font-semibold text-indigo-900">
         <span>&#10133; Also own US or European stocks directly? <span class="font-normal text-slate-600">Add them to see what your funds already hold</span></span>
         <span id="stocksBadge" class="hidden shrink-0 text-xs bg-indigo-600 text-white rounded-full px-2 py-0.5"></span>
@@ -1162,7 +1163,7 @@ async function loadIntlSample() {
   renderSelected();
   await runAnalysis();
 }
-intlSampleBtn.addEventListener('click', loadIntlSample);
+intlSampleBtn.addEventListener('click', () => { try { window.oiqTrack && window.oiqTrack('intl_sample_clicked'); } catch (e) {} loadIntlSample(); });
 if (new URLSearchParams(window.location.search).get('intl') === '1') {
   window.addEventListener('load', () => { loadIntlSample().catch(e => console.error('intl sample failed', e)); });
 }
@@ -1680,7 +1681,7 @@ function renderMineRows() {
       <button type="button" class="stock-rm text-slate-400 hover:text-red-600 text-xl leading-none px-1" aria-label="Remove ${escapeHtml(it.name)}" title="Remove">&times;</button>
     </div>`).join('');
   box.querySelectorAll('.stock-rm').forEach(b => b.addEventListener('click', () => {
-    const i = +b.closest('[data-i]').dataset.i; mineItems.splice(i, 1); renderMineRows(); syncMine(); renderMineExposure();
+    const i = +b.closest('[data-i]').dataset.i; mineItems.splice(i, 1); try { window.oiqTrack && window.oiqTrack('direct_stock_removed', { stock_count: mineItems.length }); } catch (e) {} renderMineRows(); syncMine(); renderMineExposure();
   }));
   box.querySelectorAll('.stock-amt').forEach(inp => inp.addEventListener('input', () => {
     const row = inp.closest('[data-i]'); const i = +row.dataset.i;
@@ -1760,7 +1761,7 @@ function addStock(r) {
   document.getElementById('stockSearch').value = '';
   document.getElementById('stockDropdown').classList.add('hidden');
   renderMineRows(); syncMine(); renderMineExposure();
-  try { if (typeof gtag === 'function') gtag('event', 'direct_stock_added', { ticker: (r[1][0] || r[0]).slice(0, 20) }); } catch (e) {}
+  try { if (window.oiqTrack) window.oiqTrack('direct_stock_added', { ticker: (r[1][0] || r[0]).slice(0, 20), stock_count: mineItems.length }); } catch (e) {}
 }
 function addOtherStock(text) {
   const t = text.trim().slice(0, 40);
@@ -1769,6 +1770,7 @@ function addOtherStock(text) {
   document.getElementById('stockSearch').value = '';
   document.getElementById('stockDropdown').classList.add('hidden');
   renderMineRows(); syncMine(); renderMineExposure();
+  try { window.oiqTrack && window.oiqTrack('direct_stock_added', { ticker: 'other', stock_count: mineItems.length }); } catch (e) {}
 }
 
 (function initStocks() {
@@ -1910,6 +1912,7 @@ function renderLtInputs(schemes) {
     </label>`).join('');
   box.querySelectorAll('.lt-amt').forEach(inp => inp.addEventListener('input', () => {
     LT_AMT[inp.closest('[data-k]').dataset.k] = inp.value.trim();
+    if (!window.__ltAmtTracked) { window.__ltAmtTracked = true; try { window.oiqTrack && window.oiqTrack('lookthrough_amounts_entered', { items: LT_SCHEMES.length }); } catch (e) {} }
     renderLtOut();
   }));
 }
@@ -1952,6 +1955,7 @@ window.renderLookThrough = function (schemes) {
   const card = document.getElementById('ltCard');
   if (!card) return;
   LT_SCHEMES = schemes;
+  try { window.oiqTrack && window.oiqTrack('lookthrough_viewed', { items: schemes.length, has_direct_stocks: schemes.some(x => x.key === MINE_KEY) ? 1 : 0 }); } catch (e) {}
   renderLtInputs(schemes);
   renderLtOut();
   card.classList.remove('hidden');
@@ -1972,7 +1976,7 @@ window.renderLookThrough = function (schemes) {
   // Analyze button
   const ab = document.getElementById('analyzeBtn');
   if (ab) ab.addEventListener('click', function() {
-    trackEvent('analyze_overlap', {funds_compared: document.querySelectorAll('.scheme-chip').length});
+    trackEvent('analyze_overlap', {funds_compared: document.querySelectorAll('.scheme-chip').length, has_direct_stocks: selected.has('mine') ? 1 : 0, intl_funds: [...selected].filter(k => /^-1\d{3}$/.test(String(k))).length, page_type: 'home', content_group: 'analyzer'});
   });
 
   // Sample button
