@@ -401,6 +401,13 @@
       <div id="commonHoldingsContent"></div>
     </div>
 
+    <div id="ltCard" class="card p-6 reveal hidden">
+      <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-1">What you really own, everything combined</h3>
+      <p class="text-xs sm:text-sm text-slate-500 mb-4">Optional: tell us roughly how much is in each fund and in your direct stocks (same unit for all). We then add up every company across all of them, by country, currency and sector.</p>
+      <div id="ltInputs" class="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-5"></div>
+      <div id="ltOut"></div>
+    </div>
+
     <div id="stocksLookCard" class="card p-6 reveal hidden">
       <h3 class="text-base sm:text-lg font-bold text-slate-900 mb-1">Your direct stocks, inside your funds</h3>
       <p class="text-xs sm:text-sm text-slate-500 mb-4">Which of the stocks you own directly are also held by the funds you selected, and how big they are there.</p>
@@ -568,6 +575,7 @@
 // =====================================================================
 const SCHEMES = {};                 // family_id -> {family_id, name, amc, category}
 const HOLDINGS = {};                // family_id -> {stockName: weight_pct}
+const HOLD_SECTORS = {};           // family_id -> {stockName: sector} where the API provides it
 const HOLDINGS_META = {};           // family_id -> {month, equity_pct, total_aum}
 const holdingsInflight = {};
 const selected = new Set();
@@ -734,6 +742,7 @@ async function ensureHoldings(family_id) {
       for (const h of payload.equity_holdings) {
         if (h.stock_name && h.weight_pct != null) {
           holdings[h.stock_name] = h.weight_pct;
+          if (h.sector) (HOLD_SECTORS[family_id] = HOLD_SECTORS[family_id] || {})[h.stock_name] = h.sector;
         }
       }
     }
@@ -887,6 +896,7 @@ async function runAnalysis() {
     renderUniqueness(matrix, schemes);
     renderCommonHoldings(schemes);
     if (window.renderStocksLook) renderStocksLook(schemes);
+    if (window.renderLookThrough) renderLookThrough(schemes);
 
     setTimeout(() => resultsEl.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
   } finally {
@@ -1565,7 +1575,7 @@ initWatchlist();
 // Names equal the strings used in the fund holdings so direct holdings match by name.
 // =====================================================================
 const STOCK_DB = [["NVIDIA Corp",["NVDA"],"US","USD","Technology"],["Apple Inc",["AAPL"],"US","USD","Technology"],["Microsoft Corp",["MSFT"],"US","USD","Technology"],["Broadcom Inc",["AVGO"],"US","USD","Technology"],["Micron Technology Inc",["MU"],"US","USD","Technology"],["Advanced Micro Devices Inc",["AMD"],"US","USD","Technology"],["Intel Corp",["INTC"],"US","USD","Technology"],["Palantir Technologies Inc",["PLTR"],"US","USD","Technology"],["Cisco Systems Inc",["CSCO"],"US","USD","Technology"],["Lam Research Corp",["LRCX"],"US","USD","Technology"],["Applied Materials Inc",["AMAT"],"US","USD","Technology"],["Oracle Corp",["ORCL"],"US","USD","Technology"],["Salesforce Inc",["CRM"],"US","USD","Technology"],["Adobe Inc",["ADBE"],"US","USD","Technology"],["Qualcomm Inc",["QCOM"],"US","USD","Technology"],["Texas Instruments Inc",["TXN"],"US","USD","Technology"],["Intuit Inc",["INTU"],"US","USD","Technology"],["ServiceNow Inc",["NOW"],"US","USD","Technology"],["International Business Machines Corp",["IBM"],"US","USD","Technology"],["Analog Devices Inc",["ADI"],"US","USD","Technology"],["KLA Corp",["KLAC"],"US","USD","Technology"],["Arista Networks Inc",["ANET"],"US","USD","Technology"],["Snowflake Inc",["SNOW"],"US","USD","Technology"],["Datadog Inc",["DDOG"],"US","USD","Technology"],["CrowdStrike Holdings Inc",["CRWD"],"US","USD","Technology"],["Cloudflare Inc",["NET"],"US","USD","Technology"],["Palo Alto Networks Inc",["PANW"],"US","USD","Technology"],["Synopsys Inc",["SNPS"],"US","USD","Technology"],["Cadence Design Systems Inc",["CDNS"],"US","USD","Technology"],["Tyler Technologies Inc",["TYL"],"US","USD","Technology"],["Keysight Technologies Inc",["KEYS"],"US","USD","Technology"],["Monolithic Power Systems Inc",["MPWR"],"US","USD","Technology"],["Western Digital Corp",["WDC"],"US","USD","Technology"],["Seagate Technology Holdings PLC",["STX"],"IE","USD","Technology"],["Credo Technology Group Holding Ltd",["CRDO"],"US","USD","Technology"],["CoreWeave Inc",["CRWV"],"US","USD","Technology"],["Allegro MicroSystems Inc",["ALGM"],"US","USD","Technology"],["Super Micro Computer Inc",["SMCI"],"US","USD","Technology"],["Dell Technologies Inc",["DELL"],"US","USD","Technology"],["Alphabet Inc Class A",["GOOGL"],"US","USD","Communication"],["Alphabet Inc Class C",["GOOG"],"US","USD","Communication"],["Meta Platforms Inc",["META"],"US","USD","Communication"],["Netflix Inc",["NFLX"],"US","USD","Communication"],["Walt Disney Co",["DIS"],"US","USD","Communication"],["Comcast Corp",["CMCSA"],"US","USD","Communication"],["T-Mobile US Inc",["TMUS"],"US","USD","Communication"],["Verizon Communications Inc",["VZ"],"US","USD","Communication"],["AT&T Inc",["T"],"US","USD","Communication"],["Live Nation Entertainment Inc",["LYV"],"US","USD","Communication"],["Liberty Media Corp (Formula One)",["FWONK","FWONA"],"US","USD","Communication"],["Electronic Arts Inc",["EA"],"US","USD","Communication"],["Take-Two Interactive Software Inc",["TTWO"],"US","USD","Communication"],["Reddit Inc",["RDDT"],"US","USD","Communication"],["Amazon.com Inc",["AMZN"],"US","USD","Consumer Discretionary"],["Tesla Inc",["TSLA"],"US","USD","Consumer Discretionary"],["Home Depot Inc",["HD"],"US","USD","Consumer Discretionary"],["McDonald's Corp",["MCD"],"US","USD","Consumer Discretionary"],["Nike Inc",["NKE"],"US","USD","Consumer Discretionary"],["Starbucks Corp",["SBUX"],"US","USD","Consumer Discretionary"],["Lowe's Companies Inc",["LOW"],"US","USD","Consumer Discretionary"],["Booking Holdings Inc",["BKNG"],"US","USD","Consumer Discretionary"],["TJX Companies Inc",["TJX"],"US","USD","Consumer Discretionary"],["Airbnb Inc",["ABNB"],"US","USD","Consumer Discretionary"],["Carvana Co",["CVNA"],"US","USD","Consumer Discretionary"],["Chipotle Mexican Grill Inc",["CMG"],"US","USD","Consumer Discretionary"],["Ford Motor Co",["F"],"US","USD","Consumer Discretionary"],["General Motors Co",["GM"],"US","USD","Consumer Discretionary"],["Marriott International Inc",["MAR"],"US","USD","Consumer Discretionary"],["O'Reilly Automotive Inc",["ORLY"],"US","USD","Consumer Discretionary"],["DoorDash Inc",["DASH"],"US","USD","Consumer Discretionary"],["Lululemon Athletica Inc",["LULU"],"US","USD","Consumer Discretionary"],["Walmart Inc",["WMT"],"US","USD","Consumer Staples"],["Costco Wholesale Corp",["COST"],"US","USD","Consumer Staples"],["Procter & Gamble Co",["PG"],"US","USD","Consumer Staples"],["Coca-Cola Co",["KO"],"US","USD","Consumer Staples"],["PepsiCo Inc",["PEP"],"US","USD","Consumer Staples"],["Philip Morris International Inc",["PM"],"US","USD","Consumer Staples"],["Mondelez International Inc",["MDLZ"],"US","USD","Consumer Staples"],["Colgate-Palmolive Co",["CL"],"US","USD","Consumer Staples"],["Altria Group Inc",["MO"],"US","USD","Consumer Staples"],["Estee Lauder Companies Inc",["EL"],"US","USD","Consumer Staples"],["Constellation Brands Inc",["STZ"],"US","USD","Consumer Staples"],["Clorox Co",["CLX"],"US","USD","Consumer Staples"],["Hershey Co",["HSY"],"US","USD","Consumer Staples"],["Brown-Forman Corp",["BF-B","BF.B"],"US","USD","Consumer Staples"],["Kraft Heinz Co",["KHC"],"US","USD","Consumer Staples"],["Target Corp",["TGT"],"US","USD","Consumer Staples"],["Eli Lilly and Co",["LLY"],"US","USD","Health Care"],["Johnson & Johnson",["JNJ"],"US","USD","Health Care"],["UnitedHealth Group Inc",["UNH"],"US","USD","Health Care"],["AbbVie Inc",["ABBV"],"US","USD","Health Care"],["Merck & Co Inc",["MRK"],"US","USD","Health Care"],["Pfizer Inc",["PFE"],"US","USD","Health Care"],["Thermo Fisher Scientific Inc",["TMO"],"US","USD","Health Care"],["Abbott Laboratories",["ABT"],"US","USD","Health Care"],["Danaher Corp",["DHR"],"US","USD","Health Care"],["Amgen Inc",["AMGN"],"US","USD","Health Care"],["Intuitive Surgical Inc",["ISRG"],"US","USD","Health Care"],["Gilead Sciences Inc",["GILD"],"US","USD","Health Care"],["Vertex Pharmaceuticals Inc",["VRTX"],"US","USD","Health Care"],["Zoetis Inc",["ZTS"],"US","USD","Health Care"],["Zimmer Biomet Holdings Inc",["ZBH"],"US","USD","Health Care"],["GE HealthCare Technologies Inc",["GEHC"],"US","USD","Health Care"],["Bristol-Myers Squibb Co",["BMY"],"US","USD","Health Care"],["Regeneron Pharmaceuticals Inc",["REGN"],"US","USD","Health Care"],["Medtronic PLC",["MDT"],"IE","USD","Health Care"],["Berkshire Hathaway Inc",["BRK-B","BRK.B","BRK-A"],"US","USD","Financials"],["JPMorgan Chase & Co",["JPM"],"US","USD","Financials"],["Visa Inc",["V"],"US","USD","Financials"],["Mastercard Inc",["MA"],"US","USD","Financials"],["Bank of America Corp",["BAC"],"US","USD","Financials"],["Wells Fargo & Co",["WFC"],"US","USD","Financials"],["Goldman Sachs Group Inc",["GS"],"US","USD","Financials"],["Morgan Stanley",["MS"],"US","USD","Financials"],["Citigroup Inc",["C"],"US","USD","Financials"],["American Express Co",["AXP"],"US","USD","Financials"],["Charles Schwab Corp",["SCHW"],"US","USD","Financials"],["BlackRock Inc",["BLK"],"US","USD","Financials"],["S&P Global Inc",["SPGI"],"US","USD","Financials"],["LPL Financial Holdings Inc",["LPLA"],"US","USD","Financials"],["Pinnacle Financial Partners Inc",["PNFP"],"US","USD","Financials"],["Western Alliance Bancorporation",["WAL"],"US","USD","Financials"],["Equitable Holdings Inc",["EQH"],"US","USD","Financials"],["PayPal Holdings Inc",["PYPL"],"US","USD","Financials"],["Coinbase Global Inc",["COIN"],"US","USD","Financials"],["Robinhood Markets Inc",["HOOD"],"US","USD","Financials"],["GE Aerospace",["GE"],"US","USD","Industrials"],["GE Vernova Inc",["GEV"],"US","USD","Industrials"],["Caterpillar Inc",["CAT"],"US","USD","Industrials"],["RTX Corp",["RTX"],"US","USD","Industrials"],["Honeywell International Inc",["HON"],"US","USD","Industrials"],["Boeing Co",["BA"],"US","USD","Industrials"],["Lockheed Martin Corp",["LMT"],"US","USD","Industrials"],["Union Pacific Corp",["UNP"],"US","USD","Industrials"],["Deere & Co",["DE"],"US","USD","Industrials"],["Uber Technologies Inc",["UBER"],"US","USD","Industrials"],["Quanta Services Inc",["PWR"],"US","USD","Industrials"],["Howmet Aerospace Inc",["HWM"],"US","USD","Industrials"],["Copart Inc",["CPRT"],"US","USD","Industrials"],["Otis Worldwide Corp",["OTIS"],"US","USD","Industrials"],["Masco Corp",["MAS"],"US","USD","Industrials"],["Broadridge Financial Solutions Inc",["BR"],"US","USD","Industrials"],["Sterling Infrastructure Inc",["STRL"],"US","USD","Industrials"],["Carpenter Technology Corp",["CRS"],"US","USD","Industrials"],["Modine Manufacturing Co",["MOD"],"US","USD","Industrials"],["Bloom Energy Corp",["BE"],"US","USD","Industrials"],["Vertiv Holdings Co",["VRT"],"US","USD","Industrials"],["Eaton Corp PLC",["ETN"],"IE","USD","Industrials"],["Exxon Mobil Corp",["XOM"],"US","USD","Energy"],["Chevron Corp",["CVX"],"US","USD","Energy"],["ConocoPhillips",["COP"],"US","USD","Energy"],["Schlumberger NV",["SLB"],"US","USD","Energy"],["Freeport-McMoRan Inc",["FCX"],"US","USD","Materials"],["Newmont Corp",["NEM"],"US","USD","Materials"],["NextEra Energy Inc",["NEE"],"US","USD","Utilities"],["First Solar Inc",["FSLR"],"US","USD","Technology"],["Southern Co",["SO"],"US","USD","Utilities"],["Duke Energy Corp",["DUK"],"US","USD","Utilities"],["Constellation Energy Corp",["CEG"],"US","USD","Utilities"],["Vistra Corp",["VST"],"US","USD","Utilities"],["Prologis Inc",["PLD"],"US","USD","Real Estate"],["American Tower Corp",["AMT"],"US","USD","Real Estate"],["Equinix Inc",["EQIX"],"US","USD","Real Estate"],["Realty Income Corp",["O"],"US","USD","Real Estate"],["Space Exploration Technologies Corp",[],"US","USD","Industrials"],["ASML Holding NV",["ASML","ASML.AS"],"NL","EUR","Technology"],["Adyen NV",["ADYEN.AS"],"NL","EUR","Financials"],["Prosus NV",["PRX.AS"],"NL","EUR","Consumer Discretionary"],["ING Groep NV",["INGA.AS"],"NL","EUR","Financials"],["Heineken NV",["HEIA.AS"],"NL","EUR","Consumer Staples"],["Nebius Group NV",["NBIS"],"NL","USD","Technology"],["Anheuser-Busch InBev SA/NV",["ABI.BR"],"BE","EUR","Consumer Staples"],["Ryanair Holdings PLC",["RYA.IR"],"IE","EUR","Industrials"],["CRH PLC",["CRH"],"IE","USD","Materials"],["SAP SE",["SAP","SAP.DE"],"DE","EUR","Technology"],["Rheinmetall AG",["RHM.DE"],"DE","EUR","Industrials"],["Siemens AG",["SIE.DE"],"DE","EUR","Industrials"],["Siemens Energy AG",["ENR.DE"],"DE","EUR","Industrials"],["Siemens Healthineers AG",["SHL.DE"],"DE","EUR","Health Care"],["Allianz SE",["ALV.DE"],"DE","EUR","Financials"],["Deutsche Telekom AG",["DTE.DE"],"DE","EUR","Communication"],["Mercedes-Benz Group AG",["MBG.DE"],"DE","EUR","Consumer Discretionary"],["BMW AG",["BMW.DE"],"DE","EUR","Consumer Discretionary"],["Volkswagen AG",["VOW3.DE"],"DE","EUR","Consumer Discretionary"],["Infineon Technologies AG",["IFX.DE"],"DE","EUR","Technology"],["Munich Re",["MUV2.DE"],"DE","EUR","Financials"],["Deutsche Bank AG",["DBK.DE"],"DE","EUR","Financials"],["Adidas AG",["ADS.DE"],"DE","EUR","Consumer Discretionary"],["BASF SE",["BAS.DE"],"DE","EUR","Materials"],["DHL Group",["DHL.DE"],"DE","EUR","Industrials"],["Bayer AG",["BAYN.DE"],"DE","EUR","Health Care"],["Merck KGaA",["MRK.DE"],"DE","EUR","Health Care"],["LVMH Moet Hennessy Louis Vuitton SE",["MC.PA","LVMUY"],"FR","EUR","Consumer Discretionary"],["BNP Paribas SA",["BNP.PA"],"FR","EUR","Financials"],["Hermes International",["RMS.PA"],"FR","EUR","Consumer Discretionary"],["L'Oreal SA",["OR.PA"],"FR","EUR","Consumer Staples"],["Airbus SE",["AIR.PA"],"FR","EUR","Industrials"],["TotalEnergies SE",["TTE.PA","TTE"],"FR","EUR","Energy"],["Sanofi SA",["SAN.PA","SNY"],"FR","EUR","Health Care"],["Schneider Electric SE",["SU.PA"],"FR","EUR","Industrials"],["Air Liquide SA",["AI.PA"],"FR","EUR","Materials"],["Safran SA",["SAF.PA"],"FR","EUR","Industrials"],["EssilorLuxottica SA",["EL.PA"],"FR","EUR","Health Care"],["AXA SA",["CS.PA"],"FR","EUR","Financials"],["Kering SA",["KER.PA"],"FR","EUR","Consumer Discretionary"],["Dassault Systemes SE",["DSY.PA"],"FR","EUR","Technology"],["Capgemini SE",["CAP.PA"],"FR","EUR","Technology"],["Industria de Diseno Textil SA",["ITX.MC"],"ES","EUR","Consumer Discretionary"],["Iberdrola SA",["IBE.MC"],"ES","EUR","Utilities"],["Banco Santander SA",["SAN.MC","SAN"],"ES","EUR","Financials"],["Banco Bilbao Vizcaya Argentaria SA",["BBVA.MC","BBVA"],"ES","EUR","Financials"],["Enel SpA",["ENEL.MI"],"IT","EUR","Utilities"],["Ferrari NV",["RACE","RACE.MI"],"IT","EUR","Consumer Discretionary"],["Moncler SpA",["MONC.MI"],"IT","EUR","Consumer Discretionary"],["Intesa Sanpaolo SpA",["ISP.MI"],"IT","EUR","Financials"],["UniCredit SpA",["UCG.MI"],"IT","EUR","Financials"],["Nestle SA",["NESN.SW"],"CH","CHF","Consumer Staples"],["Novartis AG",["NOVN.SW","NVS"],"CH","CHF","Health Care"],["Roche Holding AG",["ROG.SW"],"CH","CHF","Health Care"],["UBS Group AG",["UBSG.SW","UBS"],"CH","CHF","Financials"],["Zurich Insurance Group AG",["ZURN.SW"],"CH","CHF","Financials"],["ABB Ltd",["ABBN.SW","ABBNY"],"CH","CHF","Industrials"],["Cie Financiere Richemont SA",["CFR.SW"],"CH","CHF","Consumer Discretionary"],["Galderma Group AG",["GALD.SW"],"CH","CHF","Health Care"],["Lonza Group AG",["LONN.SW"],"CH","CHF","Health Care"],["Givaudan SA",["GIVN.SW"],"CH","CHF","Materials"],["Sika AG",["SIKA.SW"],"CH","CHF","Materials"],["Holcim AG",["HOLN.SW"],"CH","CHF","Materials"],["AstraZeneca PLC",["AZN.L","AZN"],"GB","GBP","Health Care"],["Shell PLC",["SHEL.L","SHEL"],"GB","GBP","Energy"],["HSBC Holdings PLC",["HSBA.L","HSBC"],"GB","GBP","Financials"],["Unilever PLC",["ULVR.L","UL"],"GB","GBP","Consumer Staples"],["BP PLC",["BP.L","BP"],"GB","GBP","Energy"],["Diageo PLC",["DGE.L","DEO"],"GB","GBP","Consumer Staples"],["GSK PLC",["GSK.L","GSK"],"GB","GBP","Health Care"],["Rio Tinto PLC",["RIO.L","RIO"],"GB","GBP","Materials"],["British American Tobacco PLC",["BATS.L","BTI"],"GB","GBP","Consumer Staples"],["RELX PLC",["REL.L","RELX"],"GB","GBP","Industrials"],["London Stock Exchange Group PLC",["LSEG.L"],"GB","GBP","Financials"],["Barclays PLC",["BARC.L","BCS"],"GB","GBP","Financials"],["Lloyds Banking Group PLC",["LLOY.L"],"GB","GBP","Financials"],["Rolls-Royce Holdings PLC",["RR.L"],"GB","GBP","Industrials"],["BAE Systems PLC",["BA.L"],"GB","GBP","Industrials"],["Compass Group PLC",["CPG.L"],"GB","GBP","Consumer Discretionary"],["National Grid PLC",["NG.L","NGG"],"GB","GBP","Utilities"],["Arm Holdings PLC",["ARM"],"GB","USD","Technology"],["Novo Nordisk A/S",["NOVO-B.CO","NVO"],"DK","DKK","Health Care"],["Vestas Wind Systems A/S",["VWS.CO"],"DK","DKK","Industrials"],["Spotify Technology SA",["SPOT"],"SE","USD","Communication"],["Atlas Copco AB",["ATCO-A.ST"],"SE","SEK","Industrials"],["Investor AB",["INVE-B.ST"],"SE","SEK","Financials"],["Telefonaktiebolaget LM Ericsson",["ERIC-B.ST","ERIC"],"SE","SEK","Technology"],["Volvo AB",["VOLV-B.ST"],"SE","SEK","Industrials"],["Equinor ASA",["EQNR.OL","EQNR"],"NO","NOK","Energy"],["Nokia Oyj",["NOKIA.HE","NOK"],"FI","EUR","Technology"],["Taiwan Semiconductor Manufacturing Co Ltd",["TSM","2330.TW"],"TW","USD","Technology"],["Alibaba Group Holding Ltd",["BABA"],"CN","USD","Consumer Discretionary"]];
-const COUNTRY_NAMES = {"US": "United States", "GB": "United Kingdom", "DE": "Germany", "FR": "France", "NL": "Netherlands", "CH": "Switzerland", "DK": "Denmark", "ES": "Spain", "IT": "Italy", "SE": "Sweden", "NO": "Norway", "FI": "Finland", "BE": "Belgium", "IE": "Ireland", "TW": "Taiwan", "CN": "China"};
+const COUNTRY_NAMES = {"US": "United States", "GB": "United Kingdom", "DE": "Germany", "FR": "France", "NL": "Netherlands", "CH": "Switzerland", "DK": "Denmark", "ES": "Spain", "IT": "Italy", "SE": "Sweden", "NO": "Norway", "FI": "Finland", "BE": "Belgium", "IE": "Ireland", "TW": "Taiwan", "CN": "China", "JP": "Japan", "KR": "South Korea", "IN": "India"};
 const STOCK_ALT = {
   'Alphabet Inc Class A': 'google', 'Alphabet Inc Class C': 'google', 'Meta Platforms Inc': 'facebook instagram',
   'Taiwan Semiconductor Manufacturing Co Ltd': 'tsmc', 'Industria de Diseno Textil SA': 'inditex zara', 'Coca-Cola Co': 'coke coca cola',
@@ -1718,7 +1728,7 @@ function renderMineExposure() {
     <div class="rounded-xl bg-white border border-slate-200 p-4">
       <div class="text-sm font-bold text-slate-900 mb-1">Where your direct stocks sit</div>
       <p class="text-xs text-slate-600 mb-3 leading-relaxed">${notes.join(' ')}</p>
-      <div class="grid sm:grid-cols-3 gap-4">${barBlock('By country', C)}${barBlock('By sector', S)}${barBlock('By currency', K)}</div>
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">${barBlock('By country', C)}${barBlock('By sector', S)}${barBlock('By currency', K)}</div>
       <p class="text-[11px] text-slate-400 mt-3">Country = company home country, currency = listing currency, sector = our simplified grouping.</p>
     </div>`;
   renderMineStatus();
@@ -1832,6 +1842,118 @@ window.renderStocksLook = function (schemes) {
   }
   html += `</div><p class="text-xs text-slate-500 mt-3 leading-relaxed">We only hold each fund&rsquo;s biggest disclosed holdings, so a stock marked &ldquo;not in these funds&rdquo; can still sit lower down. Fund percentages are of that fund; yours are of your direct stocks. To see your true total in a stock, multiply each by how much money sits in it.</p>`;
   box.innerHTML = html;
+  card.classList.remove('hidden');
+};
+
+// ---- look-through: all selected funds + direct stocks combined, weighted by how much money is in each ----
+const ASIA_DB = [["Accton Technology Corp","TW","TWD","Technology"],["Aspeed Technology Inc","TW","TWD","Technology"],["Chroma ATE Inc","TW","TWD","Technology"],["Delta Electronics Inc","TW","TWD","Technology"],["Elite Material Co Ltd","TW","TWD","Technology"],["MPI Corp","TW","TWD","Technology"],["MediaTek Inc","TW","TWD","Technology"],["Nanya Technology Corp","TW","TWD","Technology"],["WinWay Technology Co Ltd","TW","TWD","Technology"],["Yageo Corp","TW","TWD","Technology"],["Ajinomoto Co Inc","JP","JPY","Consumer Staples"],["Dai-ichi Life Holdings Inc","JP","JPY","Financials"],["Daifuku Co Ltd","JP","JPY","Industrials"],["Daikin Industries Ltd","JP","JPY","Industrials"],["Fast Retailing Co Ltd","JP","JPY","Consumer Discretionary"],["Hitachi Ltd","JP","JPY","Industrials"],["Itochu Corp","JP","JPY","Industrials"],["Kao Corp","JP","JPY","Consumer Staples"],["Keyence Corp","JP","JPY","Technology"],["Kioxia Holdings Corp","JP","JPY","Technology"],["Mitsubishi Heavy Industries Ltd","JP","JPY","Industrials"],["Mitsubishi UFJ Financial Group Inc","JP","JPY","Financials"],["Nippon Yusen KK","JP","JPY","Industrials"],["Recruit Holdings Co Ltd","JP","JPY","Industrials"],["SMC Corp","JP","JPY","Industrials"],["Shin-Etsu Chemical Co Ltd","JP","JPY","Materials"],["SoftBank Group Corp","JP","JPY","Communication"],["Sumitomo Electric Industries Ltd","JP","JPY","Industrials"],["TDK Corp","JP","JPY","Technology"],["Tokio Marine Holdings Inc","JP","JPY","Financials"],["Tokyo Electron Ltd","JP","JPY","Technology"],["SK Hynix Inc","KR","KRW","Technology"],["BYD Co Ltd","CN","HKD","Consumer Discretionary"],["Baidu Inc","CN","HKD","Communication"],["Hua Hong Semiconductor Ltd","CN","HKD","Technology"],["JD.com Inc","CN","HKD","Consumer Discretionary"],["Kuaishou Technology","CN","HKD","Communication"],["Lenovo Group Ltd","CN","HKD","Technology"],["Li Auto Inc","CN","HKD","Consumer Discretionary"],["Meituan","CN","HKD","Consumer Discretionary"],["NetEase Inc","CN","HKD","Communication"],["Semiconductor Manufacturing International Corp","CN","HKD","Technology"],["Tencent Holdings Ltd","CN","HKD","Communication"],["Trip.com Group Ltd","CN","HKD","Consumer Discretionary"],["XPeng Inc","CN","HKD","Consumer Discretionary"],["Xiaomi Corp","CN","HKD","Technology"]];
+const LOOK = new Map();
+STOCK_DB.forEach(r => LOOK.set(r[0], [r[2], r[3], r[4]]));
+ASIA_DB.forEach(r => LOOK.set(r[0], [r[1], r[2], r[3]]));
+const LT_AMT = {};
+let LT_SCHEMES = [];
+
+function ltInfo(name, sch) {
+  const r = LOOK.get(name);
+  if (r) return { cc: r[0], ccy: r[1], sector: r[2] };
+  if (sch.key === MINE_KEY || /international/i.test(sch.category || '')) return { cc: '??', ccy: '??', sector: 'Unclassified' };
+  const sec = (HOLD_SECTORS[sch.key] || {})[name];
+  return { cc: 'IN', ccy: 'INR', sector: sec || 'Indian stocks (sector not in our data)' };
+}
+
+function ltCompute(schemes) {
+  const raws = schemes.map(s => {
+    const a = LT_AMT[s.key];
+    if (a === undefined || a === '') return null;
+    const v = parseFloat(a);
+    return isFinite(v) && v > 0 ? v : 0;
+  });
+  const filled = raws.filter(v => v != null && v > 0);
+  const fill = filled.length ? filled.reduce((a, b) => a + b, 0) / filled.length : 1;
+  const eff = raws.map(v => v == null ? fill : v);
+  const tot = eff.reduce((a, b) => a + b, 0) || 1;
+  const shares = eff.map(v => v / tot * 100);
+  const comp = {}, C = {}, K = {}, S = {};
+  let itemised = 0;
+  schemes.forEach((sch, i) => {
+    const sh = shares[i];
+    if (sh <= 0) return;
+    const src = sch.key === MINE_KEY ? 'Direct stocks' : shortName(sch.name, 5);
+    const h = sch.key === MINE_KEY ? sch.holdings : sch.holdings;
+    const sum = Object.values(h).reduce((a, b) => a + b, 0) || 1;
+    for (const [name, wRaw] of Object.entries(h)) {
+      const contrib = sh * (wRaw / sum);                  // % of your total money
+      if (/not itemised/i.test(name)) { C['Not itemised'] = (C['Not itemised'] || 0) + contrib; K['Not itemised'] = (K['Not itemised'] || 0) + contrib; S['Not itemised'] = (S['Not itemised'] || 0) + contrib; continue; }
+      itemised += contrib;
+      const info = ltInfo(name, sch);
+      const cn = info.cc === '??' ? 'Unclassified' : (COUNTRY_NAMES[info.cc] || info.cc);
+      C[cn] = (C[cn] || 0) + contrib;
+      const kc = info.ccy === '??' ? 'Unclassified' : info.ccy;
+      K[kc] = (K[kc] || 0) + contrib;
+      S[info.sector] = (S[info.sector] || 0) + contrib;
+      const key = CLASS_MERGE[name] || name;
+      if (!comp[key]) comp[key] = { name: key, total: 0, parts: {} };
+      comp[key].total += contrib;
+      comp[key].parts[src] = (comp[key].parts[src] || 0) + contrib;
+    }
+  });
+  return { shares, comp: Object.values(comp), C, K, S, itemised };
+}
+
+function renderLtInputs(schemes) {
+  const box = document.getElementById('ltInputs');
+  box.innerHTML = schemes.map((s, i) => `
+    <label class="flex flex-wrap items-center gap-2 min-w-0 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2" data-k="${escapeHtml(String(s.key))}">
+      <span class="min-w-0 basis-full sm:basis-0 sm:flex-1 text-sm text-slate-800 sm:truncate">${escapeHtml(s.key === MINE_KEY ? 'My direct stocks (total value)' : s.name)}</span>
+      <input type="number" min="0" step="any" inputmode="decimal" placeholder="equal" value="${escapeHtml(LT_AMT[s.key] == null ? '' : LT_AMT[s.key])}" class="lt-amt w-24 ml-auto sm:ml-0 px-2 py-1.5 text-sm border border-slate-200 rounded-lg outline-none bg-white focus:border-indigo-400" aria-label="Amount in ${escapeHtml(s.name)}" />
+      <span class="lt-pct text-xs text-slate-500 w-12 text-right tabular-nums"></span>
+    </label>`).join('');
+  box.querySelectorAll('.lt-amt').forEach(inp => inp.addEventListener('input', () => {
+    LT_AMT[inp.closest('[data-k]').dataset.k] = inp.value.trim();
+    renderLtOut();
+  }));
+}
+
+function renderLtOut() {
+  const schemes = LT_SCHEMES;
+  const r = ltCompute(schemes);
+  document.querySelectorAll('#ltInputs [data-k]').forEach((row, i) => { row.querySelector('.lt-pct').textContent = r.shares[i].toFixed(0) + '%'; });
+  const list = r.comp.slice().sort((a, b) => b.total - a.total);
+  const top = list.slice(0, 10);
+  const multi = list.filter(c => Object.keys(c.parts).length >= 2);
+  const multiSum = multi.reduce((s, c) => s + c.total, 0);
+  const anyAmt = schemes.some(s => LT_AMT[s.key] !== undefined && LT_AMT[s.key] !== '');
+  let html = '';
+  if (!anyAmt) html += '<div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 mb-4">Showing an equal split across the items above until you enter your own amounts.</div>';
+  html += '<div class="space-y-1.5 text-sm text-slate-700 mb-5">';
+  if (top.length) {
+    const t0 = top[0], n0 = Object.keys(t0.parts).length;
+    html += `<p>Your biggest single-company position is <strong>${escapeHtml(t0.name)}</strong> at <strong>${t0.total.toFixed(1)}%</strong> of your money${n0 > 1 ? `, held <strong>${n0} different ways</strong>` : ', held in one place'}.</p>`;
+  }
+  html += `<p><strong>${multiSum.toFixed(0)}%</strong> of your money sits in companies you hold through <strong>more than one route</strong> (${multi.length} ${multi.length === 1 ? 'company' : 'companies'}).</p>`;
+  html += `<p class="text-xs text-slate-500">We can name <strong>${r.itemised.toFixed(0)}%</strong> of your money company by company. The rest sits in funds&rsquo; smaller holdings that are not disclosed in our data.</p></div>`;
+  html += '<div class="text-xs font-semibold text-slate-700 mb-2">Biggest combined positions</div><div class="space-y-2 mb-6">';
+  const mx = top.length ? top[0].total : 1;
+  for (const c of top) {
+    const parts = Object.entries(c.parts).sort((a, b) => b[1] - a[1]);
+    html += `<div><div class="flex items-center justify-between gap-2 text-sm"><span class="font-medium text-slate-900 truncate">${escapeHtml(c.name)}</span><span class="tabular-nums text-slate-700 shrink-0">${c.total.toFixed(1)}%</span></div>
+      <div class="h-2 bg-slate-100 rounded-full overflow-hidden my-1"><div class="h-2 rounded-full ${parts.length > 1 ? 'bg-gradient-to-r from-amber-400 to-orange-500' : 'bg-gradient-to-r from-indigo-500 to-violet-500'}" style="width:${Math.max(2, c.total / mx * 100)}%"></div></div>
+      <div class="flex flex-wrap gap-1">${parts.map(([k, v]) => `<span class="text-[11px] bg-slate-50 border border-slate-200 text-slate-600 rounded-full px-2 py-0.5">${escapeHtml(k)} ${v.toFixed(1)}%</span>`).join('')}</div></div>`;
+  }
+  html += '</div>';
+  const secUnc = (r.S['Unclassified'] || 0) + (r.S['Not itemised'] || 0);
+  const showSector = secUnc < 60;
+  html += `<div class="grid grid-cols-1 ${showSector ? 'sm:grid-cols-3' : 'sm:grid-cols-2'} gap-4">${barBlock('By country', r.C)}${barBlock('By currency (where the shares are listed)', r.K)}${showSector ? barBlock('By sector', r.S) : ''}</div>`;
+  html += `<p class="text-[11px] text-slate-400 mt-4 leading-relaxed">Method: every fund is scaled to 100% of its disclosed holdings, then multiplied by its share of your money. Cash and debt are ignored. &ldquo;Not itemised&rdquo; is the part of an international fund we hold no company names for. Indian funds count as India and INR, and sector shows only where our data has it. Currency is where the shares are listed, not what you pay in.</p>`;
+  document.getElementById('ltOut').innerHTML = html;
+}
+
+window.renderLookThrough = function (schemes) {
+  const card = document.getElementById('ltCard');
+  if (!card) return;
+  LT_SCHEMES = schemes;
+  renderLtInputs(schemes);
+  renderLtOut();
   card.classList.remove('hidden');
 };
 </script>
