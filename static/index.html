@@ -1912,7 +1912,7 @@ function renderLtInputs(schemes) {
     </label>`).join('');
   box.querySelectorAll('.lt-amt').forEach(inp => inp.addEventListener('input', () => {
     LT_AMT[inp.closest('[data-k]').dataset.k] = inp.value.trim();
-    if (!window.__ltAmtTracked) { window.__ltAmtTracked = true; try { window.oiqTrack && window.oiqTrack('lookthrough_amounts_entered', { items: LT_SCHEMES.length }); } catch (e) {} }
+    if (!window.__ltAmtTracked) { window.__ltAmtTracked = true; try { window.oiqTrack && window.oiqTrack('lookthrough_amounts_entered', { item_count: LT_SCHEMES.length }); } catch (e) {} }
     renderLtOut();
   }));
 }
@@ -1955,7 +1955,7 @@ window.renderLookThrough = function (schemes) {
   const card = document.getElementById('ltCard');
   if (!card) return;
   LT_SCHEMES = schemes;
-  try { window.oiqTrack && window.oiqTrack('lookthrough_viewed', { items: schemes.length, has_direct_stocks: schemes.some(x => x.key === MINE_KEY) ? 1 : 0 }); } catch (e) {}
+  try { window.oiqTrack && window.oiqTrack('lookthrough_viewed', { item_count: schemes.length, has_direct_stocks: schemes.some(x => x.key === MINE_KEY) ? 1 : 0 }); } catch (e) {}
   renderLtInputs(schemes);
   renderLtOut();
   card.classList.remove('hidden');

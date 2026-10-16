@@ -122,6 +122,6 @@
   var errs = 0;
   window.addEventListener('error', function (e) {
     if (errs++ >= 3) return;
-    ev('js_error', { message: clip(e && e.message, 90), source: clip(e && e.filename ? e.filename.split('/').pop() : '', 40) });
+    ev('js_error', { message: clip(e && e.message, 90), script_file: clip(e && e.filename ? e.filename.split('/').pop() : '', 40) });
   });
 })();
