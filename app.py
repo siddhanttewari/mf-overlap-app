@@ -291,6 +291,11 @@ def gift_city_hub():
 def reits_hub():
     return send_from_directory("static", "reits.html")
 
+@app.route("/international")
+@app.route("/international/")
+def international_hub():
+    return send_from_directory("static", "international.html")
+
 @app.route("/blog/<slug>")
 def blog_post(slug):
     return send_from_directory("static/blog", f"{slug}.html")
@@ -464,7 +469,7 @@ def api_stats():
 # ============================================================
 # HOLDINGS — Snapshot for negative IDs, live for positive
 # ============================================================
-@app.route("/api/holdings/<int:family_id>")
+@app.route("/api/holdings/<int(signed=True):family_id>")
 def api_holdings(family_id):
     # Snapshot entries (negative IDs) — serve directly
     if family_id < 0:

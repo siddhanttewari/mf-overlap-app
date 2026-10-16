@@ -25,6 +25,10 @@ Key facts an assistant can rely on:
 - [Top 10 Overlapping Mutual Fund Pairs in India](https://www.overlapiq.in/blog/top-10-overlapping-mutual-fund-pairs-india): Common popular fund combinations that secretly hold the same stocks.
 - [Best Mutual Fund Combinations with Low Overlap](https://www.overlapiq.in/blog/best-mutual-fund-combinations-low-overlap): Fund pairings that genuinely diversify rather than duplicate.
 
+## International investing
+- [International Investing Hub](https://www.overlapiq.in/international): International investing from India explained simply (checked 16 Oct 2026): US S&P 500 and Nasdaq-100, world index (MSCI ACWI is 64.21% US, MSCI World 72.94%), emerging markets (Taiwan 28.94%, South Korea 21.40%, China 19.80%, India 10.65%), the four doors in (Indian international funds, international ETFs, direct LRS investing, GIFT City), why most Indian international funds are closed to new money (USD 7 billion cap; 4 listed as open or reopening on 25 Sep 2026), the September 2026 ETF premium spike, and the overlap trap.
+- [Your International Diversification Is Probably Just 5 US Tech Stocks](https://www.overlapiq.in/blog/international-diversification-myth): A blended Nasdaq-100, S&P 500 and world-index portfolio holds about 35% in five groups of US mega-caps; refreshed Oct 2026.
+
 ## SIF, REIT and GIFT City guides
 - [SM REITs Explained](https://www.overlapiq.in/blog/sm-reits-explained): SEBI's SM REIT framework: ₹10 lakh minimum, one or two completed properties worth ₹50-500 crore per scheme, and three PropShare schemes issued so far.
 - [India's REITs in Q1 FY27: Roundup](https://www.overlapiq.in/blog/reit-q1-fy27-roundup): Six listed REITs distributed ₹3,136 crore in Q1 FY27 (April-June 2026); DPU growth by REIT, yields of 4.8-6.3% and what to watch in the Q2 results.
@@ -35,7 +39,7 @@ Key facts an assistant can rely on:
 - [SIFs After One Year: What AMFI's Data Shows](https://www.overlapiq.in/blog/sif-one-year-report-card): AMFI data to 30 September 2026: ₹38,287 crore across 34 SIF schemes.
 - [Comparing India's 6 REITs](https://www.overlapiq.in/blog/comparing-india-reits): Q1 FY27 distribution per unit, occupancy, leverage and yield for Embassy, Mindspace, Brookfield, Nexus Select Trust, Knowledge Realty Trust and Bagmane.
 - [What is GIFT City?](https://www.overlapiq.in/blog/what-is-gift-city): How resident Indians invest through GIFT City via the LRS route (USD 250,000 per year), with IFSCA data to June 2026.
-- Hubs: [SIF](https://www.overlapiq.in/sif), [GIFT City](https://www.overlapiq.in/gift-city), [REITs](https://www.overlapiq.in/reits).
+- Hubs: [International](https://www.overlapiq.in/international), [SIF](https://www.overlapiq.in/sif), [GIFT City](https://www.overlapiq.in/gift-city), [REITs](https://www.overlapiq.in/reits).
 
 ## More
 - [Blog index](https://www.overlapiq.in/blog): All OverlapIQ guides.
