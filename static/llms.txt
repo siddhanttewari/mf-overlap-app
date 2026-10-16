@@ -25,6 +25,13 @@ Key facts an assistant can rely on:
 - [Top 10 Overlapping Mutual Fund Pairs in India](https://www.overlapiq.in/blog/top-10-overlapping-mutual-fund-pairs-india): Common popular fund combinations that secretly hold the same stocks.
 - [Best Mutual Fund Combinations with Low Overlap](https://www.overlapiq.in/blog/best-mutual-fund-combinations-low-overlap): Fund pairings that genuinely diversify rather than duplicate.
 
+## SIF, REIT and GIFT City guides
+- [SIF vs AIF](https://www.overlapiq.in/blog/sif-vs-aif): A SIF is a mutual fund product with a ₹10 lakh minimum per PAN and daily NAV; an AIF is a privately pooled vehicle with a ₹1 crore minimum, and Category III AIFs may use leverage up to 2x NAV.
+- [SIFs After One Year: What AMFI's Data Shows](https://www.overlapiq.in/blog/sif-one-year-report-card): AMFI data to 30 September 2026: ₹38,287 crore across 34 SIF schemes.
+- [Comparing India's 6 REITs](https://www.overlapiq.in/blog/comparing-india-reits): Q1 FY27 distribution per unit, occupancy, leverage and yield for Embassy, Mindspace, Brookfield, Nexus Select Trust, Knowledge Realty Trust and Bagmane.
+- [What is GIFT City?](https://www.overlapiq.in/blog/what-is-gift-city): How resident Indians invest through GIFT City via the LRS route (USD 250,000 per year), with IFSCA data to June 2026.
+- Hubs: [SIF](https://www.overlapiq.in/sif), [GIFT City](https://www.overlapiq.in/gift-city), [REITs](https://www.overlapiq.in/reits).
+
 ## More
 - [Blog index](https://www.overlapiq.in/blog): All OverlapIQ guides.
 - [Sitemap](https://www.overlapiq.in/sitemap.xml): Full list of indexable URLs.
