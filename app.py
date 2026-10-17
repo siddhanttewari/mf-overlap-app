@@ -594,6 +594,22 @@ def api_xray_index():
     return resp
 
 
+_LEARN_SLUGS = ['candlesticks-and-volume', 'diversification-and-overlap', 'drawdowns-and-recovery', 'journal', 'lab', 'reading-a-price-chart', 'risk-return-and-volatility', 'sip-vs-lump-sum', 'stocks-indexes-and-funds', 'trends-and-moving-averages', 'what-is-the-stock-market']
+
+
+@app.route("/learn")
+@app.route("/learn/")
+def learn_hub():
+    return send_from_directory("static", "learn.html")
+
+
+@app.route("/learn/<slug>")
+def learn_page(slug):
+    if slug not in _LEARN_SLUGS:
+        return send_from_directory("static", "learn.html"), 404
+    return send_from_directory("static/learn", f"{slug}.html")
+
+
 @app.route("/api/holdings/<int(signed=True):family_id>")
 def api_holdings(family_id):
     # Snapshot entries (negative IDs) — serve directly
