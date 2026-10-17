@@ -72,15 +72,16 @@
   }
 
   // ------------------------------------------------------------------ matching
-  var TICK_TO_SCHEME = {};
+  var TICK_TO_SCHEME = {}, ALIAS_SET = {};
   function indexSchemes(list) {
     SCHEMES = list.map(function (s) {
       var ticks = [];
       var all = s.name.match(/\(([A-Za-z0-9\/ ]+)\)/g), m = all && /\(([A-Za-z0-9\/ ]+)\)/.exec(all[all.length - 1]);
-      if (m && s.id <= -1100) m[1].split('/').forEach(function (t) { t = t.trim().toUpperCase(); if (t) { ticks.push(t); TICK_TO_SCHEME[t] = s.id; } });
+      if (m && /ETF|NSE-listed|US-listed|UCITS/.test(s.name)) m[1].split('/').forEach(function (t) { t = t.trim().toUpperCase(); if (t) { ticks.push(t); TICK_TO_SCHEME[t] = s.id; } });
       return { id: s.id, name: s.name, amc: s.amc, category: s.category, ticks: ticks, toks: toks(s.name), tokset: null };
     });
     SCHEMES.forEach(function (s) { s.tokset = {}; s.toks.forEach(function (t) { s.tokset[t] = 1; }); });
+    Object.keys(XR.etfAlias || {}).forEach(function (t) { if (!TICK_TO_SCHEME[t.toUpperCase()] && schemeById(XR.etfAlias[t])) { TICK_TO_SCHEME[t.toUpperCase()] = XR.etfAlias[t]; ALIAS_SET[t.toUpperCase()] = 1; } });
   }
   function schemeById(id) { for (var i = 0; i < SCHEMES.length; i++) if (SCHEMES[i].id === id) return SCHEMES[i]; return null; }
 
@@ -98,14 +99,16 @@
     return out.slice(0, 4);
   }
 
+  var NONEQ_NAME = /\b(gold|silver|liquid|overnight|gilt|g-?sec|bonds?|debt|money market|treasury|fixed maturity|sdl|t-?bills?|fixed deposit|fd)\b/i;
   function matchOne(rawIn) {
     var raw = String(rawIn || '').trim();
     var clean = raw.replace(/^(NSE|BSE|NASDAQ|NYSE)\s*[:\-]\s*/i, '').replace(/[.\-](NS|BO|US|L|DE|AS|PA)$/i, '').replace(/-EQ$/i, '').trim();
     var sym = clean.toUpperCase().replace(/\s+/g, '');
     var looksSymbol = /^[A-Z0-9&\-.]{1,15}$/.test(clean.replace(/\s+/g, '')) && !/\s/.test(clean);
+    if ((XR.nonEq || []).indexOf(sym) >= 0 || (NONEQ_NAME.test(clean) && !TICK_TO_SCHEME[sym])) return { kind: 'other' };
     // 1) exact ETF or stock ticker
     if (looksSymbol || clean.length <= 12) {
-      if (TICK_TO_SCHEME[sym] != null) return { kind: 'fund', id: TICK_TO_SCHEME[sym] };
+      if (TICK_TO_SCHEME[sym] != null) return { kind: 'fund', id: TICK_TO_SCHEME[sym], alias: !!ALIAS_SET[sym] };
       if (STOCK_BY_TICK[sym]) return { kind: 'stock', stock: STOCK_BY_TICK[sym] };
     }
     // 2) company name
@@ -190,13 +193,14 @@
   // ------------------------------------------------------------------ positions UI
   function addPos(raw, amount, forced) {
     var m = forced || matchOne(raw);
-    var p = { uid: ++uidN, raw: raw, amount: amount, kind: m.kind, id: m.id, stock: m.stock, cands: m.cands || [] };
+    var p = { uid: ++uidN, raw: raw, amount: amount, kind: m.kind, id: m.id, stock: m.stock, cands: m.cands || [], alias: !!m.alias };
     positions.push(p);
     return p;
   }
   function labelOf(p) {
     if (p.kind === 'fund') { var s = schemeById(p.id); return s ? s.name : 'Fund ' + p.id; }
     if (p.kind === 'stock') return p.stock;
+    if (p.kind === 'other') return p.raw;
     return '';
   }
   function save() { try { localStorage.setItem(STORE, JSON.stringify({ positions: positions, ccy: entryCcy(), fx: $('xrFx').value })); } catch (e) { } }
@@ -223,10 +227,11 @@
       var chip, label = labelOf(p);
       if (p.kind === 'fund') chip = '<span class="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full px-2 py-0.5 whitespace-nowrap">Fund or ETF</span>';
       else if (p.kind === 'stock') chip = '<span class="text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5 whitespace-nowrap">Direct stock</span>';
+      else if (p.kind === 'other') chip = '<span class="text-xs font-semibold text-slate-600 bg-slate-100 border border-slate-200 rounded-full px-2 py-0.5 whitespace-nowrap">Gold, debt or cash</span>';
       else chip = '<span class="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5 whitespace-nowrap">Not matched</span>';
       var main = p.kind === 'none'
         ? '<div class="text-sm text-slate-700 mb-1.5">' + esc(p.raw) + '</div>' + candSelect(p)
-        : '<div class="text-sm font-semibold text-slate-900 break-words">' + esc(label) + '</div>' + (norm(p.raw) !== norm(label) ? '<div class="text-xs text-slate-400 break-words">from "' + esc(p.raw) + '"</div>' : '');
+        : '<div class="text-sm font-semibold text-slate-900 break-words">' + esc(label) + '</div>' + (norm(p.raw) !== norm(label) ? '<div class="text-xs text-slate-400 break-words">from "' + esc(p.raw) + '"' + (p.alias ? ': another fund house\'s ETF on the same index, so the same companies' : '') + '</div>' : '');
       var amt = p.amount == null ? '' : p.amount;
       html += '<div class="grid grid-cols-[1fr_auto] sm:grid-cols-[auto_1fr_150px_auto] gap-x-3 gap-y-2 items-center border-t border-slate-100 py-3">' +
         '<div class="order-1">' + chip + '</div>' +
@@ -313,7 +318,9 @@
     var visibleAmt = 0, perPos = [];
     items.forEach(function (p) {
       var A = amountInr(p), vis = 0, label = labelOf(p);
-      if (p.kind === 'stock') {
+      if (p.kind === 'other') {
+        perPos.push({ p: p, A: A, vis: 0, label: label, other: true }); return;
+      } else if (p.kind === 'stock') {
         add(p.stock, A, p, true); vis = A;
       } else {
         var h = holdingsCache[p.id];
@@ -447,7 +454,7 @@
     // per-holding coverage
     var cov = R.perPos.map(function (x) {
       var v = x.A ? x.vis / x.A * 100 : 0;
-      return '<tr class="border-t border-slate-100"><td class="py-2 pr-3 text-slate-800 break-words">' + esc(x.label) + (x.failed ? ' <span class="text-xs text-red-600">(holdings not available)</span>' : '') + '</td><td class="py-2 pr-3 text-right whitespace-nowrap">' + inr(x.A) + '</td><td class="py-2 text-right whitespace-nowrap ' + (v < 40 ? 'text-amber-700' : 'text-slate-700') + '">' + pct(v, 0) + '</td></tr>';
+      return '<tr class="border-t border-slate-100"><td class="py-2 pr-3 text-slate-800 break-words">' + esc(x.label) + (x.failed ? ' <span class="text-xs text-red-600">(holdings not available)</span>' : '') + (x.other ? ' <span class="text-xs text-slate-400">(gold, debt or cash: no companies to look inside)</span>' : '') + '</td><td class="py-2 pr-3 text-right whitespace-nowrap">' + inr(x.A) + '</td><td class="py-2 text-right whitespace-nowrap ' + (v < 40 ? 'text-amber-700' : 'text-slate-700') + '">' + (x.other ? 'n/a' : pct(v, 0)) + '</td></tr>';
     }).join('');
     heads.push(card('How much of each holding we can see', 'Funds publish many holdings but we hold each fund\'s biggest ones. A low number just means a spread-out fund (such as a small cap or a world ETF), so its smaller positions are not counted above.',
       '<div class="overflow-x-auto"><table class="w-full text-sm"><thead><tr class="text-left text-xs text-slate-400"><th class="py-1 pr-3">Holding</th><th class="py-1 pr-3 text-right">Your amount</th><th class="py-1 text-right">Seen by company</th></tr></thead><tbody>' + cov + '</tbody></table></div>'));

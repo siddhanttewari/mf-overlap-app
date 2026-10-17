@@ -68,7 +68,10 @@ def clean_name(name):
 
 
 def is_junk(name):
-    return bool(_JUNK.search((name or "").strip()))
+    n = (name or "").strip()
+    if "(not itemised)" in n:      # an ETF's own remainder bucket is kept (it is what makes overlap a floor)
+        return False
+    return bool(_JUNK.search(n))
 
 
 def clean_holdings(pairs):
