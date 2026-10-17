@@ -33,6 +33,73 @@ try:
 except ImportError:
     pass  # international_funds.py not present, skip
 
+# --- v12 holdings cleanup (17 Oct 2026) ---------------------------------------------------
+# The scraped Indian-fund holdings contain rows that are not companies (returns, ranks, category averages, cash, repo, G-secs, NCDs, CDs,
+# fund units) and the same company under several spellings. They are cleaned here when the app starts and again for Supabase reads;
+# nothing in the database is changed. International funds and ETFs (ids below -1000) are curated and left as they are.
+import re
+
+_JUNK = re.compile(
+    r"^(fund returns?|category average|rank)\b"
+    r"|^\d+\s*(years?|yrs?|months?|days?)\b"
+    r"|^(repo|reverse repo|tri-?party repo|treps|cblo|others? cblo|net current assets|cash/net current assets|net receivables?|"
+    r"cash margin|cash and cash equivalents|cash & cash equivalents|margin money|others?)\b"
+    r"|\b(ncd|cd|bd|loa|cp|ptc|fvrs\w*|t-?bills?|sdl|g-?sec)\b"
+    r"|\bfv\s?rs\b"
+    r"|^(government of india|central government loan|state development loan|goi\b|\d+(\.\d+)?%\s*(goi|government|[a-z]))"
+    r"|securitisation trust"
+    r"|\(\d{1,2}[-/][a-z0-9]{2,3}[-/]\d{2,4}\)"
+    r"|direct[- ]growth|regular[- ]growth|\bbond fund\b|\bliquid fund\b"
+    r"|^(national bank for agriculture|small industries dev|export import bank|national housing bank)",
+    re.I)
+_FOOT = re.compile(r"(\s*[*#]+)+\s*$")
+
+
+def clean_name(name):
+    s = (name or "").strip()
+    s = _FOOT.sub("", s).strip()
+    s = re.sub(r"\s*\((?:taiwan|korea|china|hong kong|japan)\)\s*forgn\.?\s*eq\s*$", "", s, flags=re.I)
+    s = re.sub(r"\bLtd\.", "Ltd", s)
+    s = re.sub(r"\bLimited$", "Ltd", s)
+    s = re.sub(r"\bPvt\.", "Pvt", s)
+    s = re.sub(r"\s+", " ", s).rstrip(".").strip()
+    return s
+
+
+def is_junk(name):
+    return bool(_JUNK.search((name or "").strip()))
+
+
+def clean_holdings(pairs):
+    """pairs: iterable of (name, weight). Returns (dict name->weight rounded to 4dp, dropped list of (name, weight))."""
+    out, dropped = {}, []
+    for name, w in pairs:
+        if w is None:
+            continue
+        if is_junk(name):
+            dropped.append((name, w))
+            continue
+        c = clean_name(name)
+        if not c:
+            dropped.append((name, w))
+            continue
+        out[c] = round(out.get(c, 0.0) + float(w), 4)
+    return out, dropped
+
+_CLEAN_STATS = {"funds": 0, "rows_dropped": 0, "weight_dropped": 0.0}
+for _fid, _s in SNAPSHOT_SCHEMES.items():
+    if _fid > -1000:
+        _c, _d = clean_holdings(_s["holdings"].items())
+        _CLEAN_STATS["funds"] += 1
+        _CLEAN_STATS["rows_dropped"] += len(_d)
+        _CLEAN_STATS["weight_dropped"] += sum(w for _, w in _d)
+        _s["holdings"] = _c
+_CLEAN_STATS["weight_dropped"] = round(_CLEAN_STATS["weight_dropped"], 1)
+# Funds with no company shares left after cleaning (money-market, government-securities, fund-of-funds) cannot be compared; hide them.
+_NO_EQUITY = {_f for _f, _s in SNAPSHOT_SCHEMES.items() if _f > -1000 and not _s["holdings"]}
+_CLEAN_STATS["hidden_no_equity"] = len(_NO_EQUITY)
+# --- end v12 holdings cleanup ---------------------------------------------------
+
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
@@ -138,17 +205,15 @@ def supabase_get_holdings(family_id):
         "order": "weight_pct.desc",
     }) or []
     months = [h.get("as_of_month") for h in holdings_rows if h.get("as_of_month")]
+    _cleaned, _ = clean_holdings([(h["stock_name"], h["weight_pct"]) for h in holdings_rows])
+    _sector_by = {clean_name(h["stock_name"]): h.get("sector") for h in holdings_rows}
     return {
         "month": months[0] if months else SNAPSHOT_DATE,
         "total_aum": None,
         "equity_pct": None,
         "equity_holdings": [
-            {
-                "stock_name": h["stock_name"],
-                "weight_pct": float(h["weight_pct"]),
-                "sector": h.get("sector"),
-            }
-            for h in holdings_rows
+            {"stock_name": n, "weight_pct": w, "sector": _sector_by.get(n)}
+            for n, w in _cleaned.items()
         ],
         "_source": "supabase",
     }
@@ -343,7 +408,7 @@ def health():
         "status": "ok",
         "holdings_cached": len(_holdings_cache),
         "search_cached": len(_search_cache),
-        "snapshot_funds": len(SNAPSHOT_SCHEMES),
+        "snapshot_funds": len(SNAPSHOT_SCHEMES) - len(_NO_EQUITY),
         "data_source": "snapshot (primary) + mfdata.in (supplementary)",
     })
 
@@ -351,7 +416,7 @@ def health():
 def _snapshot_stats():
     amcs = {s["amc"] for s in SNAPSHOT_SCHEMES.values()}
     return {
-        "total_schemes": len(SNAPSHOT_SCHEMES),
+        "total_schemes": len(SNAPSHOT_SCHEMES) - len(_NO_EQUITY),
         "total_amcs": len(amcs),
         "latest_holdings_month": SNAPSHOT_DATE,
         "_source": "snapshot",
@@ -472,7 +537,7 @@ def api_search():
             except Exception:
                 _mark_upstream_down()
 
-    result = sorted(results_by_name.values(), key=lambda x: (x.get("name") or "").lower())
+    result = sorted((r for r in results_by_name.values() if r.get("family_id") not in _NO_EQUITY), key=lambda x: (x.get("name") or "").lower())
     return jsonify(result)
 
 
@@ -504,6 +569,11 @@ def api_stats():
 # ============================================================
 # HOLDINGS — Snapshot for negative IDs, live for positive
 # ============================================================
+@app.route("/api/data-quality")
+def api_data_quality():
+    return jsonify({"holdings_cleanup": _CLEAN_STATS})
+
+
 @app.route("/api/holdings/<int(signed=True):family_id>")
 def api_holdings(family_id):
     # Snapshot entries (negative IDs) — serve directly
