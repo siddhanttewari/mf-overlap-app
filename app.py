@@ -49,8 +49,9 @@ _JUNK = re.compile(
     r"|^(government of india|central government loan|state development loan|goi\b|\d+(\.\d+)?%\s*(goi|government|[a-z]))"
     r"|securitisation trust"
     r"|\(\d{1,2}[-/][a-z0-9]{2,3}[-/]\d{2,4}\)"
-    r"|direct[- ]growth|regular[- ]growth|\bbond fund\b|\bliquid fund\b"
-    r"|^(national bank for agriculture|small industries dev|export import bank|national housing bank)",
+    r"|direct[- ]growth|regular[- ]growth|direct plan|plan[- ]growth|\bbond fund\b|\bliquid fund\b"
+    r"|^(national bank for agriculture|small industries dev|export import bank|national housing bank)"
+    r"|^current assets|\b(etf|fof)\b|(^|\s)funds?$|\bdebt\b|^[a-z ]+ state$|^\d+(\.\d+)?\s+[a-z]",
     re.I)
 _FOOT = re.compile(r"(\s*[*#]+)+\s*$")
 
@@ -572,6 +573,22 @@ def api_stats():
 @app.route("/api/data-quality")
 def api_data_quality():
     return jsonify({"holdings_cleanup": _CLEAN_STATS})
+
+
+@app.route("/xray")
+@app.route("/xray/")
+def xray_page():
+    return send_from_directory("static", "xray.html")
+
+
+@app.route("/api/xray/index")
+def api_xray_index():
+    """Lightweight fund list for the Portfolio X-Ray (client-side matching). Snapshot funds with company holdings only."""
+    out = [{"id": fid, "name": s["name"], "amc": s.get("amc", ""), "category": s.get("category", "")}
+           for fid, s in SNAPSHOT_SCHEMES.items() if fid not in _NO_EQUITY]
+    resp = jsonify(out)
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
 
 
 @app.route("/api/holdings/<int(signed=True):family_id>")

@@ -13,10 +13,12 @@
   var pageType = path === '/' ? 'home'
     : path === '/blog' ? 'blog_index'
     : slug ? 'blog_post'
+    : path === '/xray' ? 'tool'
     : /^\/(international|sif|gift-city|reits)$/.test(path) ? 'hub' : 'other';
 
   function groupOf() {
     var p = path + ' ' + slug;
+    if (path === '/xray') return 'xray';
     if (/gift|lrs/.test(p)) return 'gift-city';
     if (/sif|long-short/.test(p)) return 'sif';
     if (/reit|invit/.test(p)) return 'reits';
@@ -102,7 +104,7 @@
       var d = u.pathname.replace(/\/+$/, '') || '/';
       var sec = sectionOf(a);
       var logoLink = d === '/' && !u.search && !u.hash && (sec === 'header' || sec === 'footer');   // brand/logo link is navigation, not a CTA
-      var type = logoLink ? 'home' : d === '/' ? 'analyzer' : /^\/(international|sif|gift-city|reits)$/.test(d) ? 'hub' : d.indexOf('/blog') === 0 ? 'blog' : 'other';
+      var type = logoLink ? 'home' : d === '/' ? 'analyzer' : d === '/xray' ? 'tool' : /^\/(international|sif|gift-city|reits)$/.test(d) ? 'hub' : d.indexOf('/blog') === 0 ? 'blog' : 'other';
       var params = { link_url: clip(dest, 100), link_text: text, link_type: type, section: sec };
       ev('internal_link_click', params);
       if (type === 'analyzer') ev('analyzer_cta_click', params);

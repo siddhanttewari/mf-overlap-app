@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Portfolio X-Ray: See What You Really Own | OverlapIQ</title>
+<meta name="description" content="Add your mutual funds, ETFs and direct stocks and see the real companies underneath: hidden duplicates, country and sector split, and a US estate-tax check. Free, private, runs in your browser." />
+<link rel="canonical" href="https://www.overlapiq.in/xray" />
+<meta property="og:title" content="Portfolio X-Ray: See What You Really Own" />
+<meta property="og:description" content="Add your mutual funds, ETFs and direct stocks and see the real companies underneath: hidden duplicates, country and sector split, and a US estate-tax check. Free, private, runs in your browser." />
+<meta property="og:url" content="https://www.overlapiq.in/xray" />
+<meta property="og:type" content="website" />
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "OverlapIQ Portfolio X-Ray", "url": "https://www.overlapiq.in/xray", "applicationCategory": "FinanceApplication", "operatingSystem": "Any", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"}, "description": "Free portfolio X-Ray for Indian investors: add your mutual funds, ETFs and direct stocks and see the real companies, countries and sectors underneath, hidden duplicates, and a US estate-tax check. Runs in your browser; nothing is uploaded."}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{"@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.overlapiq.in/"}, {"@type": "ListItem", "position": 2, "name": "Portfolio X-Ray", "item": "https://www.overlapiq.in/xray"}]}</script>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{"@type": "Question", "name": "Do my holdings or amounts get uploaded anywhere?", "acceptedAnswer": {"@type": "Answer", "text": "No. Your file is read inside your browser and the amounts never leave your device. The only thing sent to our server is the ID of each fund you hold, so we can fetch that fund's public list of holdings. There is no signup and no PAN. Your list is kept in your own browser so it is still there when you come back, and the Clear button deletes it."}}, {"@type": "Question", "name": "What file can I upload?", "acceptedAnswer": {"@type": "Answer", "text": "A CSV (a plain comma-separated file) with one row per holding: a name or ticker column and a value column (or quantity and price). Most broker and fund apps can export your holdings as CSV. If yours only gives PDF or Excel, save the Excel sheet as CSV, or paste the list into the box, or add each holding with the search box."}}, {"@type": "Question", "name": "What does look-through mean?", "acceptedAnswer": {"@type": "Answer", "text": "A fund is a basket of companies. Look-through opens each basket and adds up your share of every company inside, across all your funds, ETFs and direct shares, so you can see what you really own and how many times the same company shows up."}}, {"@type": "Question", "name": "Why is only part of my money visible by company?", "acceptedAnswer": {"@type": "Answer", "text": "Funds publish long lists, but we hold the biggest holdings for each fund (usually the top 20). A concentrated fund such as a large cap or Nifty 50 index fund is almost fully visible. A spread-out fund such as a small cap fund or a world ETF shows less. The X-Ray tells you the visible share for every holding, and it never invents the rest."}}, {"@type": "Question", "name": "How is overlap between two holdings measured?", "acceptedAnswer": {"@type": "Answer", "text": "Exactly like our analyzer: take the listed holdings of each fund, scale them to 100 percent, and for every company both hold, count the smaller of the two weights. Because only the biggest holdings are listed, the true overlap can only be higher, so we show it as \"at least\"."}}, {"@type": "Question", "name": "How does the US estate-tax check work?", "acceptedAnswer": {"@type": "Answer", "text": "A non-US person who owns US-situs assets worth more than USD 60,000 when they die may have to file a US estate-tax return, with tax rates that climb to 40 percent. US-listed ETFs and shares of US companies count. Indian mutual funds and Irish UCITS ETFs are generally not treated as US-situs. We add up the US-situs part of your list and compare it with the USD 60,000 line, using an exchange rate you can edit. It is an education tool, not tax advice, so check your own case with a qualified adviser."}}, {"@type": "Question", "name": "Does this tell me what to buy or sell?", "acceptedAnswer": {"@type": "Answer", "text": "No. The X-Ray only shows what the published holdings data says you own. It does not recommend, rate or rank any fund, stock or ETF, and nothing here is investment, tax or legal advice."}}]}</script>
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-N1QH6QYEC9"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-N1QH6QYEC9');</script>
+<link rel="stylesheet" href="/css/site.css?v=521976c7">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>html,body{font-family:'Inter',sans-serif;} body{background:linear-gradient(180deg,#f8fafc 0%,#eef2ff 100%);min-height:100vh;}</style>
+<link rel="icon" type="image/svg+xml" href='data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><defs><linearGradient id="fa" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" stop-color="%236366f1"/><stop offset="100%25" stop-color="%233b82f6"/></linearGradient><linearGradient id="fb" x1="0%25" y1="0%25" x2="100%25" y2="100%25"><stop offset="0%25" stop-color="%23a855f7"/><stop offset="100%25" stop-color="%23ec4899"/></linearGradient></defs><circle cx="14" cy="20" r="11" fill="url(%23fa)" opacity=".85"/><circle cx="26" cy="20" r="11" fill="url(%23fb)" opacity=".85"/></svg>' />
+<script defer src="/js/xray-data.js?v=d9dcfbb5"></script>
+<script defer src="/js/xray.js?v=698a8cad"></script>
+<script defer src="/js/track.js?v=2"></script>
+</head>
+<body class="text-slate-800">
+
+<header class="border-b border-slate-200/70 bg-white/85 backdrop-blur-sm sticky top-0 z-30">
+  <div class="max-w-5xl mx-auto px-5 py-3 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+    <a href="/" class="flex items-center gap-3"><svg class="w-9 h-9" viewBox="0 0 40 40"><defs><linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6366f1"/><stop offset="100%" stop-color="#3b82f6"/></linearGradient><linearGradient id="g2" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#a855f7"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs><circle cx="14" cy="20" r="11" fill="url(#g1)" opacity="0.85"/><circle cx="26" cy="20" r="11" fill="url(#g2)" opacity="0.85"/></svg><span class="text-xl font-bold bg-gradient-to-r from-indigo-600 via-violet-600 to-pink-500 bg-clip-text text-transparent">OverlapIQ</span></a>
+    <nav class="flex gap-3 sm:gap-4 text-sm w-full sm:w-auto overflow-x-auto whitespace-nowrap pb-0.5">
+      <a href="/" class="text-slate-600 hover:text-indigo-600 font-medium">Analyzer</a>
+      <a href="/xray" class="text-indigo-600 font-semibold">X-Ray</a>
+      <a href="/blog" class="text-slate-600 hover:text-indigo-600 font-medium">Blog</a>
+      <a href="/international" class="text-violet-600 hover:text-indigo-700 font-semibold">International</a>
+      <a href="/sif" class="text-slate-600 hover:text-indigo-600 font-medium">SIFs</a>
+      <a href="/gift-city" class="text-slate-600 hover:text-indigo-600 font-medium">GIFT City</a>
+      <a href="/reits" class="text-slate-600 hover:text-indigo-600 font-medium">REITs</a>
+    </nav>
+  </div>
+</header>
+
+<main class="max-w-5xl mx-auto px-5 py-8 sm:py-12">
+  <nav class="text-sm text-slate-500 mb-5"><a href="/" class="hover:text-indigo-600">Home</a> <span class="mx-1">&rsaquo;</span> <span class="text-slate-700">Portfolio X-Ray</span></nav>
+
+  <section class="mb-8">
+    <div class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1 mb-3">New &middot; free &middot; no signup</div>
+    <h1 class="text-3xl sm:text-4xl font-extrabold tracking-tight text-slate-900">Portfolio X-Ray: see what you really own</h1>
+    <p class="mt-3 text-slate-600 text-base sm:text-lg leading-relaxed max-w-3xl">You hold some mutual funds, a few ETFs and maybe a handful of shares. Open every basket and add it all up. You will see the real companies underneath, which ones you own many times over, and where in the world and which sectors your money sits.</p>
+    <p class="mt-3 text-sm text-slate-600 bg-white border border-slate-200 rounded-xl px-4 py-3 max-w-3xl">&#128274; <strong>Private by design:</strong> your file is read in your browser. Amounts never leave your device, there is no signup and no PAN. Only fund IDs are sent to us, to fetch public holdings. <a href="/privacy" class="text-indigo-600 underline">How it works</a></p>
+  </section>
+
+  <noscript><p class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">The X-Ray needs JavaScript to run in your browser, which is how your amounts stay private.</p></noscript>
+  <p id="xrLoading" class="text-sm text-slate-500 py-6">Loading the fund list...</p>
+
+  <div id="xrReady" class="hidden">
+    <section class="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
+      <h2 class="text-lg font-bold text-slate-900"><span class="text-indigo-600">1.</span> Add what you hold</h2>
+      <p class="text-sm text-slate-500 mt-1">Pick any way you like. You can mix them.</p>
+
+      <div class="grid md:grid-cols-2 gap-4 mt-4">
+        <label id="xrDropzone" for="xrFile" class="block cursor-pointer rounded-xl border-2 border-dashed border-slate-300 p-5 text-center hover:border-indigo-400 hover:bg-indigo-50/50 transition">
+          <div class="text-2xl">&#128196;</div>
+          <div class="text-sm font-semibold text-slate-900 mt-1">Upload a CSV from your broker or fund app</div>
+          <div class="text-xs text-slate-500 mt-1">Drop it here or tap to choose. Needs a name or ticker column and a value column (or quantity and price).</div>
+          <input id="xrFile" type="file" accept=".csv,.txt,text/csv,text/plain" class="sr-only">
+        </label>
+        <div>
+          <label for="xrPaste" class="text-sm font-semibold text-slate-900">Or paste a list, one holding per line</label>
+          <textarea id="xrPaste" rows="4" class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2" placeholder="Parag Parikh Flexi Cap Fund, 400000&#10;VOO 250000&#10;RELIANCE 120000"></textarea>
+          <button id="xrPasteBtn" type="button" class="mt-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-semibold hover:bg-slate-700">Add these</button>
+        </div>
+      </div>
+
+      <div class="mt-4 relative">
+        <label for="xrSearch" class="text-sm font-semibold text-slate-900">Or search and add one by one</label>
+        <input id="xrSearch" type="search" autocomplete="off" class="mt-1 w-full text-sm border border-slate-200 rounded-xl px-3 py-2.5" placeholder="Fund name, ETF ticker (VOO, QQQ, INDA) or a company (NVDA, RELIANCE)">
+        <div id="xrDrop" class="hidden absolute z-20 left-0 right-0 mt-1 max-h-72 overflow-y-auto bg-white border border-slate-200 rounded-xl shadow-lg"></div>
+      </div>
+
+      <div class="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3">
+        <div><label for="xrCcy" class="text-xs font-semibold text-slate-600 block">Amounts are in</label>
+          <select id="xrCcy" class="mt-1 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5"><option value="INR">Rupees (&#8377;)</option><option value="USD">US dollars ($)</option></select></div>
+        <div id="xrFxWrap"><label for="xrFx" class="text-xs font-semibold text-slate-600 block">USD 1 = &#8377;</label>
+          <input id="xrFx" class="mt-1 w-24 text-sm border border-slate-200 rounded-lg px-2.5 py-1.5" inputmode="decimal" value="94.92" aria-describedby="xrFxNote"></div>
+        <p id="xrFxNote" class="text-xs text-slate-500 pb-1.5">Rate of 16 Oct 2026, edit if you like. Used for US-dollar amounts and the US estate-tax check.</p>
+        <button id="xrSample" type="button" class="ml-auto text-sm font-semibold text-indigo-700 hover:underline pb-1">Try a sample portfolio</button>
+      </div>
+      <p id="xrImportStatus" class="text-xs mt-2" role="status"></p>
+    </section>
+
+    <section class="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6 mt-5">
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="text-lg font-bold text-slate-900"><span class="text-indigo-600">2.</span> Check your list</h2>
+        <button id="xrClear" type="button" class="text-xs text-slate-400 hover:text-red-600 whitespace-nowrap">Clear everything</button>
+      </div>
+      <div id="xrRows" class="mt-2"></div>
+      <p id="xrTotals" class="text-xs text-slate-500 mt-3"></p>
+      <button id="xrRun" type="button" disabled class="mt-4 w-full sm:w-auto px-6 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-semibold text-sm sm:text-base hover:shadow-lg transition disabled:opacity-40 disabled:cursor-not-allowed">X-ray my portfolio</button>
+    </section>
+
+    <section id="xrResults" class="hidden mt-8" aria-live="polite">
+      <h2 class="text-xl sm:text-2xl font-bold text-slate-900 mb-4">Your X-Ray</h2>
+      <div id="xrOut"></div>
+    </section>
+  </div>
+
+  <section class="mt-12">
+    <h2 class="text-xl font-bold text-slate-900 mb-3">What the X-Ray can and cannot see</h2>
+    <div class="grid sm:grid-cols-2 gap-4 text-sm text-slate-600">
+      <div class="rounded-xl bg-white border border-slate-200 p-4"><div class="font-semibold text-slate-900 mb-1">It covers</div>
+        <ul class="list-disc pl-5 space-y-1"><li>Indian mutual funds in the analyzer (about 190 with company holdings)</li><li>12 Indian international funds and 69 international ETFs (US-listed and Irish UCITS)</li><li>Direct shares: Indian stocks by NSE symbol or name, and large US and European companies</li></ul></div>
+      <div class="rounded-xl bg-white border border-slate-200 p-4"><div class="font-semibold text-slate-900 mb-1">It does not cover</div>
+        <ul class="list-disc pl-5 space-y-1"><li>Debt funds, gold, real estate, EPF, PPF, fixed deposits</li><li>The smaller holdings of a fund (we hold roughly the top 20 per fund)</li><li>Anything it cannot match: those rows are flagged and left out so they never skew the numbers</li></ul></div>
+    </div>
+    <p class="mt-3 text-xs text-slate-500">Holdings are the latest published month we hold for each fund, and funds change them every month. This is an educational view of public data, not investment, tax or legal advice, and not a recommendation to buy, sell or hold anything.</p>
+  </section>
+
+  <section class="mt-12">
+    <h2 class="text-xl font-bold text-slate-900 mb-3">Questions</h2>
+    <details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">Do my holdings or amounts get uploaded anywhere?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">No. Your file is read inside your browser and the amounts never leave your device. The only thing sent to our server is the ID of each fund you hold, so we can fetch that fund's public list of holdings. There is no signup and no PAN. Your list is kept in your own browser so it is still there when you come back, and the Clear button deletes it.</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">What file can I upload?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">A CSV (a plain comma-separated file) with one row per holding: a name or ticker column and a value column (or quantity and price). Most broker and fund apps can export your holdings as CSV. If yours only gives PDF or Excel, save the Excel sheet as CSV, or paste the list into the box, or add each holding with the search box.</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">What does look-through mean?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">A fund is a basket of companies. Look-through opens each basket and adds up your share of every company inside, across all your funds, ETFs and direct shares, so you can see what you really own and how many times the same company shows up.</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">Why is only part of my money visible by company?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">Funds publish long lists, but we hold the biggest holdings for each fund (usually the top 20). A concentrated fund such as a large cap or Nifty 50 index fund is almost fully visible. A spread-out fund such as a small cap fund or a world ETF shows less. The X-Ray tells you the visible share for every holding, and it never invents the rest.</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">How is overlap between two holdings measured?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">Exactly like our analyzer: take the listed holdings of each fund, scale them to 100 percent, and for every company both hold, count the smaller of the two weights. Because only the biggest holdings are listed, the true overlap can only be higher, so we show it as "at least".</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">How does the US estate-tax check work?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">A non-US person who owns US-situs assets worth more than USD 60,000 when they die may have to file a US estate-tax return, with tax rates that climb to 40 percent. US-listed ETFs and shares of US companies count. Indian mutual funds and Irish UCITS ETFs are generally not treated as US-situs. We add up the US-situs part of your list and compare it with the USD 60,000 line, using an exchange rate you can edit. It is an education tool, not tax advice, so check your own case with a qualified adviser.</p></details><details class="group rounded-xl border border-slate-200 bg-white px-4 py-3 mb-3"><summary class="cursor-pointer text-sm sm:text-base font-semibold text-slate-900">Does this tell me what to buy or sell?</summary><p class="mt-2 text-sm text-slate-600 leading-relaxed">No. The X-Ray only shows what the published holdings data says you own. It does not recommend, rate or rank any fund, stock or ETF, and nothing here is investment, tax or legal advice.</p></details>
+  </section>
+
+  <div class="mt-10 bg-indigo-50 border border-indigo-200 rounded-xl p-6">
+    <p class="text-base font-semibold text-indigo-900 mb-2">Want to compare just two or three funds?</p>
+    <p class="text-sm text-indigo-700 mb-3">The <a href="/" class="underline font-semibold">overlap analyzer</a> shows exactly which companies any set of funds share. For the bigger picture on international investing, start at the <a href="/international" class="underline font-semibold">International Investing Hub</a>.</p>
+  </div>
+</main>
+
+<footer class="max-w-5xl mx-auto px-5 py-8 border-t border-slate-200 text-xs text-slate-500 text-center">
+  <a href="/" class="text-indigo-600 hover:underline">&larr; Back to OverlapIQ Analyzer</a> &middot; <a href="/blog" class="text-indigo-600 hover:underline">All Posts</a>
+ &middot; <a href="/international" class="text-indigo-600 hover:underline">International Hub</a> &middot; <a href="/privacy" class="text-indigo-600 hover:underline">Privacy</a></footer>
+</body>
+</html>

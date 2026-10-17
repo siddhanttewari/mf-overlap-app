@@ -25,6 +25,9 @@ Key facts an assistant can rely on:
 - [Top 10 Overlapping Mutual Fund Pairs in India](https://www.overlapiq.in/blog/top-10-overlapping-mutual-fund-pairs-india): Common popular fund combinations that secretly hold the same stocks.
 - [Best Mutual Fund Combinations with Low Overlap](https://www.overlapiq.in/blog/best-mutual-fund-combinations-low-overlap): Fund pairings that genuinely diversify rather than duplicate.
 
+## Tools
+- [Portfolio X-Ray](https://www.overlapiq.in/xray): Free, private tool that opens every mutual fund, ETF and direct stock you hold and adds up the real companies underneath, flags hidden duplicates, shows country and sector split and checks US estate-tax exposure (USD 60,000 threshold for non-US persons). Runs in the browser; amounts are never uploaded.
+
 ## International investing
 - [Privacy: how OverlapIQ handles your data](https://www.overlapiq.in/privacy): No signup, PAN or uploads. Amounts and weights typed into the tools stay in the browser; direct stocks and watchlist are saved only in the visitor's own browser; the server receives fund searches and the fund picked; Google Analytics receives counts and clicks, never amounts.
 - [International Investing Hub](https://www.overlapiq.in/international): International investing from India explained simply (checked 16 Oct 2026): US S&P 500 and Nasdaq-100, world index (MSCI ACWI is 64.21% US, MSCI World 72.94%), emerging markets (Taiwan 28.94%, South Korea 21.40%, China 19.80%, India 10.65%), the four doors in (Indian international funds, international ETFs, direct LRS investing, GIFT City), why most Indian international funds are closed to new money (USD 7 billion cap; 4 listed as open or reopening on 25 Sep 2026), the September 2026 ETF premium spike, and the overlap trap.
