@@ -25,10 +25,13 @@
   }
   var group = path === '/' ? 'home' : groupOf();
 
+  var debug = /[?&]debug_mode=(1|true)\b/.test(location.search);
+
   function ev(name, params) {
     try {
       if (typeof window.gtag !== 'function') return;
       var p = params || {};
+      if (debug) p.debug_mode = true; // shows the event in GA4 > Admin > DebugView
       p.page_type = pageType;
       p.content_group = group;
       window.gtag('event', name, p);
