@@ -291,6 +291,12 @@ def gift_city_hub():
 def reits_hub():
     return send_from_directory("static", "reits.html")
 
+@app.route("/privacy")
+@app.route("/privacy/")
+def privacy_page():
+    return send_from_directory("static", "privacy.html")
+
+
 @app.route("/international")
 @app.route("/international/")
 def international_hub():
