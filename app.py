@@ -21,7 +21,7 @@ import json
 import os
 import time
 from threading import Lock
-from flask import Flask, jsonify, send_from_directory, request
+from flask import Flask, jsonify, send_from_directory, request, redirect
 from flask_cors import CORS
 
 from snapshot import SNAPSHOT_SCHEMES, SNAPSHOT_DATE
@@ -301,6 +301,35 @@ def privacy_page():
 @app.route("/international/")
 def international_hub():
     return send_from_directory("static", "international.html")
+
+BLOG_REDIRECTS = {
+    "best-mutual-fund-combinations-no-overlap": "best-mutual-fund-combinations-low-overlap",
+    "how-many-mutual-funds-to-hold": "how-many-mutual-funds-should-you-hold",
+    "flexi-cap-vs-large-cap": "flexi-cap-vs-large-cap-overlap",
+    "large-cap-fund-overlap": "large-cap-fund-overlap-india",
+}
+
+
+@app.after_request
+def cache_static_css(resp):
+    """Compiled stylesheet is content-hashed via ?v=, so it can be cached for a year."""
+    if request.path.startswith("/css/"):
+        resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return resp
+
+
+@app.before_request
+def legacy_blog_redirects():
+    """301 old thin duplicate posts to their replacements (also covers the .html form)."""
+    p = request.path
+    if p.startswith("/blog/"):
+        slug = p[len("/blog/"):].rstrip("/")
+        if slug.endswith(".html"):
+            slug = slug[:-5]
+        target = BLOG_REDIRECTS.get(slug)
+        if target:
+            return redirect("/blog/" + target, code=301)
+
 
 @app.route("/blog/<slug>")
 def blog_post(slug):
