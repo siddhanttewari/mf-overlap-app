@@ -351,3 +351,88 @@ INTL_SCHEMES = {
                   'Li Auto Inc': 1.91,
                   'Other holdings of Mirae Asset Hang Seng TECH ETF FoF (not itemised)': 15.52}},
 }
+
+
+# ======================================================================================================================
+# ETF_SNAPSHOT_MARKER - International ETFs (added 17 Oct 2026): 4 US-listed + 4 Irish-domiciled UCITS (accumulating)
+# Same rules as above: dated, top holdings only, each list topped up with a "(not itemised)" bucket, results are MINIMUM overlap.
+# Index trackers share the same holdings and bucket name as the Indian funds that track the same index (S&P 500 -> -1003,
+# Nasdaq-100 -> -1001) so identical indices show as 100% overlap.
+# Sources, all read 17 Oct 2026: StockAnalysis ETF holdings pages (third-party aggregator; confirm against the issuer),
+# Vanguard UK product page (FTSE All-World UCITS ETF), iShares UK product pages (ISINs, TER, index).
+# Not included: Vanguard S&P 500 UCITS ETF Acc (VUAA) - the Vanguard page we could read was the distributing line, not verified.
+# ======================================================================================================================
+def _topup(named, bucket):
+    h = dict(named)
+    h[bucket] = round(100.0 - sum(named.values()), 2)
+    assert h[bucket] > 0, bucket
+    return h
+
+
+_SPX = INTL_SCHEMES[-1003]['holdings']
+_NDX = INTL_SCHEMES[-1001]['holdings']
+
+_VTI = _topup({'NVIDIA Corp': 6.87, 'Apple Inc': 6.30, 'Microsoft Corp': 5.10, 'Amazon.com Inc': 3.41, 'Alphabet Inc Class A': 2.70,
+               'Broadcom Inc': 2.37, 'Alphabet Inc Class C': 2.12, 'Meta Platforms Inc': 1.70, 'Micron Technology Inc': 1.46,
+               'Tesla Inc': 1.40, 'Eli Lilly and Co': 1.33, 'JPMorgan Chase & Co': 1.29, 'Berkshire Hathaway Inc': 1.23,
+               'Advanced Micro Devices Inc': 1.04, 'Exxon Mobil Corp': 0.90, 'Johnson & Johnson': 0.87, 'Visa Inc': 0.85,
+               'Mastercard Inc': 0.63, 'Walmart Inc': 0.62, 'AbbVie Inc': 0.61},
+              'Other US total-market stocks (not itemised)')
+
+# two non-company lines in the source list (cash / collateral) are left out and fall into the "not itemised" bucket
+_VT = _topup({'NVIDIA Corp': 4.32, 'Apple Inc': 3.84, 'Microsoft Corp': 3.16, 'Amazon.com Inc': 2.11, 'Alphabet Inc Class A': 1.68,
+              'Taiwan Semiconductor Manufacturing Co Ltd': 1.53, 'Broadcom Inc': 1.44, 'Alphabet Inc Class C': 1.31,
+              'Meta Platforms Inc': 1.05, 'Micron Technology Inc': 0.91, 'Tesla Inc': 0.90, 'JPMorgan Chase & Co': 0.80,
+              'Eli Lilly and Co': 0.77, 'Samsung Electronics Co Ltd': 0.73, 'Berkshire Hathaway Inc': 0.69,
+              'Advanced Micro Devices Inc': 0.64, 'SK Hynix Inc': 0.56, 'Exxon Mobil Corp': 0.56},
+             'Other FTSE Global All Cap stocks (not itemised)')
+
+_WORLD = _topup({'NVIDIA Corp': 5.68, 'Apple Inc': 5.41, 'Microsoft Corp': 3.84, 'Amazon.com Inc': 2.71, 'Alphabet Inc Class A': 2.26,
+                 'Alphabet Inc Class C': 1.78, 'Broadcom Inc': 1.78, 'Meta Platforms Inc': 1.77, 'Micron Technology Inc': 1.28,
+                 'Tesla Inc': 1.17, 'Advanced Micro Devices Inc': 1.09, 'JPMorgan Chase & Co': 1.02, 'Eli Lilly and Co': 1.01,
+                 'Berkshire Hathaway Inc': 0.77, 'ASML Holding NV': 0.72, 'Exxon Mobil Corp': 0.71, 'Johnson & Johnson': 0.70,
+                 'Visa Inc': 0.67, 'Intel Corp': 0.58, 'Walmart Inc': 0.51},
+                'Other MSCI World stocks (not itemised)')
+
+_VWRA = _topup({'NVIDIA Corp': 5.01, 'Apple Inc': 4.52, 'Microsoft Corp': 3.58, 'Amazon.com Inc': 2.27, 'Alphabet Inc Class A': 1.91,
+                'Taiwan Semiconductor Manufacturing Co Ltd': 1.78, 'Broadcom Inc': 1.54, 'Meta Platforms Inc': 1.50,
+                'Alphabet Inc Class C': 1.49, 'Micron Technology Inc': 1.13},
+               'Other FTSE All-World stocks (not itemised)')
+
+_ETF_NOTE = ('StockAnalysis holdings page (third-party aggregator), read 17 Oct 2026; confirm against the issuer. ')
+
+INTL_SCHEMES.update({
+    -1101: {'family_id': -1101, 'name': 'Vanguard S&P 500 ETF (VOO) - US-listed', 'category': 'International ETF - US Broad',
+            'amc': 'Vanguard (US-listed ETF)', 'month': 'Oct 2026', 'coverage': 'Top 20 of S&P 500 index (518 holdings)',
+            'source': 'Tracks the S&P 500, so index weights are used (same list as the Indian S&P 500 fund): S&P 500 weights via SlickCharts, viewed 16 Oct 2026. '
+                      'Vanguard-reported VOO weights at 30 Sep 2026 differ slightly because of the date.',
+            'holdings': dict(_SPX)},
+    -1102: {'family_id': -1102, 'name': 'Vanguard Total Stock Market ETF (VTI) - US-listed', 'category': 'International ETF - US Broad',
+            'amc': 'Vanguard (US-listed ETF)', 'month': 'Aug 2026', 'coverage': 'Top 20 of 3,514 holdings',
+            'source': _ETF_NOTE + 'Holdings as of 31 Aug 2026.', 'holdings': _VTI},
+    -1103: {'family_id': -1103, 'name': 'Invesco QQQ Trust (QQQ) - US-listed', 'category': 'International ETF - US Tech',
+            'amc': 'Invesco (US-listed ETF)', 'month': 'Oct 2026', 'coverage': 'Top 20 of Nasdaq-100 index (104 holdings)',
+            'source': 'Tracks the Nasdaq-100, so index weights are used (same list as the Indian Nasdaq-100 funds): Nasdaq-100 weights via SlickCharts, viewed 16 Oct 2026.',
+            'holdings': dict(_NDX)},
+    -1104: {'family_id': -1104, 'name': 'Vanguard Total World Stock ETF (VT) - US-listed', 'category': 'International ETF - Global',
+            'amc': 'Vanguard (US-listed ETF)', 'month': 'Aug 2026', 'coverage': 'Top 18 companies of 10,180 holdings',
+            'source': _ETF_NOTE + 'Holdings as of 31 Aug 2026; two cash/collateral lines in the list are excluded.', 'holdings': _VT},
+    -1105: {'family_id': -1105, 'name': 'iShares Core S&P 500 UCITS ETF (CSPX) - Irish UCITS, accumulating', 'category': 'International ETF - US Broad',
+            'amc': 'iShares (Irish UCITS ETF)', 'month': 'Oct 2026', 'coverage': 'Top 20 of S&P 500 index (505 holdings)',
+            'source': 'ISIN IE00B5BMR087, tracks the S&P 500 (iShares UK page, 15 Oct 2026), so index weights are used: S&P 500 weights via SlickCharts, viewed 16 Oct 2026.',
+            'holdings': dict(_SPX)},
+    -1106: {'family_id': -1106, 'name': 'iShares NASDAQ 100 UCITS ETF (CNDX) - Irish UCITS, accumulating', 'category': 'International ETF - US Tech',
+            'amc': 'iShares (Irish UCITS ETF)', 'month': 'Oct 2026', 'coverage': 'Top 20 of Nasdaq-100 index (101 holdings)',
+            'source': 'ISIN IE00B53SZB19, tracks the Nasdaq-100 (iShares UK page, 15 Oct 2026), so index weights are used: Nasdaq-100 weights via SlickCharts, viewed 16 Oct 2026.',
+            'holdings': dict(_NDX)},
+    -1107: {'family_id': -1107, 'name': 'iShares Core MSCI World UCITS ETF (SWDA/IWDA) - Irish UCITS, accumulating', 'category': 'International ETF - Global',
+            'amc': 'iShares (Irish UCITS ETF)', 'month': 'Sep 2026', 'coverage': 'Top 20 of MSCI World index (about 1,277 stocks)',
+            'source': 'ISIN IE00B4L5Y983, tracks the MSCI World Index (iShares UK page). Weights are the MSCI World index weights as held by the iShares MSCI World ETF (URTH), '
+                      'StockAnalysis, 21 Sep 2026.', 'holdings': _WORLD},
+    -1108: {'family_id': -1108, 'name': 'Vanguard FTSE All-World UCITS ETF (VWRA/VWRP) - Irish UCITS, accumulating', 'category': 'International ETF - Global',
+            'amc': 'Vanguard (Irish UCITS ETF)', 'month': 'Sep 2026', 'coverage': 'Top 10 of 3,821 holdings',
+            'source': 'ISIN IE00BK5BQT80, tracks the FTSE All-World Index. Top 10 holdings as at 30 Sep 2026 from the Vanguard UK product page.', 'holdings': _VWRA},
+})
+for _k in range(-1108, -1100):
+    _h = INTL_SCHEMES[_k]['holdings']
+    assert abs(sum(_h.values()) - 100) < 0.05, (_k, sum(_h.values()))
