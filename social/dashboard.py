@@ -14,7 +14,7 @@ from functools import wraps
 import requests
 from flask import (Blueprint, abort, flash, redirect, render_template, request, session, url_for)
 
-from . import config as C, db, writer
+from . import config as C, db, posts
 
 bp = Blueprint("social", __name__, url_prefix="/admin/social", template_folder="templates")
 
@@ -22,7 +22,7 @@ STATUS_TABS = [
     ("draft", "To review"), ("approved", "Scheduled"), ("published", "Published"),
     ("failed", "Failed"), ("working", "In progress"), ("rejected", "Rejected"),
 ]
-WORKING = "in.(generating,revise,rerender,publishing)"
+WORKING = "in.(generating,render,revise,rerender,publishing)"
 EDIT_SKIP = {"type", "items", "unit", "n"}
 
 
@@ -106,7 +106,7 @@ def dispatch_workflow(inputs=None):
     r = requests.post(
         f"https://api.github.com/repos/{C.GH_REPO}/actions/workflows/{C.GH_GENERATE_WORKFLOW}/dispatches",
         headers={"Authorization": f"Bearer {C.GH_DISPATCH_TOKEN}", "Accept": "application/vnd.github+json"},
-        json={"ref": "main", "inputs": inputs or {}}, timeout=20)
+        json={"ref": "main", **({"inputs": inputs} if inputs else {})}, timeout=20)
     return r.status_code == 204
 
 
@@ -139,7 +139,7 @@ def queue():
 @login_required
 def detail(pid):
     post = get_post(pid)
-    return render_template("social/detail.html", p=post, ist=ist, full_caption=writer.full_caption(post),
+    return render_template("social/detail.html", p=post, ist=ist, full_caption=posts.full_caption(post),
                            next_slot=next_free_slot(), edit_skip=EDIT_SKIP)
 
 
@@ -201,8 +201,12 @@ def action(pid):
 
     db.update(C.POSTS_TABLE, {"id": pid}, patch)
     if act in ("revise", "rerender"):
-        flash("Sent back to the agent — refreshing now." if dispatch_workflow({"job": "revisions"})
-              else "Queued — the agent will pick it up on its next run.")
+        if act == "rerender":
+            flash("Re-drawing the slides now — refresh in ~3 minutes." if dispatch_workflow()
+                  else "Queued — the slides are re-drawn within the hour.")
+        else:
+            flash("Sent back to Claude — it rewrites drafts every morning at ~6:45 AM. "
+                  "For a faster rewrite, ask Claude in the chat.")
     if act.startswith("approve"):
         flash(f"Approved — scheduled for {ist(patch['scheduled_for'].isoformat()):%a %d %b, %I:%M %p} IST")
     if act in ("reject", "approve_slot", "approve_at"):
@@ -214,13 +218,12 @@ def action(pid):
     return redirect(url_for("social.detail", pid=pid))
 
 
-@bp.route("/generate", methods=["POST"])
+@bp.route("/render-now", methods=["POST"])
 @login_required
-def generate_now():
-    only = request.form.get("only") or ""
-    ok = dispatch_workflow({"job": "generate", "only": only})
-    flash("The agent is generating new drafts — they appear here in ~3-5 minutes." if ok
-          else "Couldn't trigger the agent. Set GH_DISPATCH_TOKEN, or run the 'Social: generate' Action on GitHub.")
+def render_now():
+    ok = dispatch_workflow()
+    flash("Drawing pending drafts now — they appear here in ~3 minutes." if ok
+          else "Couldn't trigger GitHub. Set GH_DISPATCH_TOKEN, or run 'Social: render & publish' in GitHub Actions.")
     return redirect(url_for("social.queue"))
 
 

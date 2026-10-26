@@ -28,7 +28,7 @@ details summary{cursor:pointer;font-weight:600}
 </style>
 {% endblock %}
 {% block body %}
-<p style="margin:0 0 12px"><a href="{{ url_for('social.queue', status=('working' if p.status in ['generating','revise','rerender','publishing'] else p.status)) }}" class="muted">← Back to queue</a></p>
+<p style="margin:0 0 12px"><a href="{{ url_for('social.queue', status=('working' if p.status in ['generating','render','revise','rerender','publishing'] else p.status)) }}" class="muted">← Back to queue</a></p>
 <div class="status">
   <span class="pill {{ p.source_type }}">{{ p.source_type }}</span>
   <span class="pill">{{ p.status }}</span>

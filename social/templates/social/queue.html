@@ -25,19 +25,15 @@
 <div class="top">
   <h2 style="margin:0">{{ dict(tabs)[status] }}</h2>
   <span class="spacer"></span>
-  <form method="post" action="{{ url_for('social.generate_now') }}" style="display:flex;gap:8px">
+  <form method="post" action="{{ url_for('social.render_now') }}">
     <input type="hidden" name="csrf" value="{{ csrf_token() }}">
-    <select name="only" aria-label="Source" style="width:auto">
-      <option value="">All sources</option><option value="blog">From blog</option>
-      <option value="data">From fund data</option><option value="trending">Trending topic</option>
-    </select>
-    <button class="btn primary" {{ 'disabled title="Set GH_DISPATCH_TOKEN to enable"'|safe if not can_dispatch }}>Generate drafts</button>
+    <button class="btn" {{ 'disabled title="Set GH_DISPATCH_TOKEN to enable"'|safe if not can_dispatch }}>Draw pending drafts now</button>
   </form>
 </div>
 
 {% if not posts %}
 <div class="card empty muted">
-  {% if status == 'draft' %}Nothing to review. New drafts arrive on the agent's schedule, or hit “Generate drafts”.{% else %}Nothing here yet.{% endif %}
+  {% if status == 'draft' %}Nothing to review. Claude writes new drafts on Mondays and Thursdays; for one now, ask Claude in the chat.{% else %}Nothing here yet.{% endif %}
 </div>
 {% else %}
 <div class="grid">

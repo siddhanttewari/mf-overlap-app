@@ -20,11 +20,6 @@ STORAGE_BUCKET = env("SOCIAL_BUCKET", "social")
 POSTS_TABLE = "ig_posts"
 SETTINGS_TABLE = "ig_settings"
 
-# --- Claude ---------------------------------------------------------------
-ANTHROPIC_API_KEY = env("ANTHROPIC_API_KEY")
-CLAUDE_MODEL = env("CLAUDE_MODEL", "claude-sonnet-5-5")
-WEB_SEARCH_TOOL = env("CLAUDE_WEB_SEARCH_TOOL", "web_search_20250305")
-
 # --- Instagram (Instagram API with Instagram Login) -------------------------
 IG_USER_ID = env("IG_USER_ID")
 IG_ACCESS_TOKEN = env("IG_ACCESS_TOKEN")  # long-lived token; refreshed + stored in ig_settings
@@ -40,7 +35,7 @@ GH_DISPATCH_TOKEN = env("GH_DISPATCH_TOKEN")
 # Secret path segment for /admin/social/cron/<key> (publishing scheduler pinged by UptimeRobot)
 CRON_KEY = env("SOCIAL_CRON_KEY")
 GH_REPO = env("GH_REPO", "siddhanttewari/mf-overlap-app")
-GH_GENERATE_WORKFLOW = env("GH_GENERATE_WORKFLOW", "social-generate.yml")
+GH_GENERATE_WORKFLOW = env("GH_WORKER_WORKFLOW", "social-generate.yml")  # the hourly render & publish worker
 
 # --- Content --------------------------------------------------------------
 SITE_URL = env("SITE_URL", "https://overlapiq.in")
@@ -49,8 +44,6 @@ TZ = ZoneInfo("Asia/Kolkata")
 POSTING_SLOTS = [(int(h), int(m)) for h, m in
                  (s.split(":") for s in env("SOCIAL_SLOTS", "09:30,19:00").split(","))]
 POSTING_DAYS = [int(d) for d in env("SOCIAL_DAYS", "0,2,4").split(",")]  # Mon, Wed, Fri
-# Which sources each generator run draws from, in order
-RUN_MIX = env("SOCIAL_RUN_MIX", "blog,data,trending").split(",")
 
 BRAND = {
     "name": "OverlapIQ",

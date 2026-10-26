@@ -1,18 +1,19 @@
-"""The agent's jobs. Run from GitHub Actions (or locally):
+"""GitHub Actions worker: draws drafts into slide images and publishes approved posts. No AI involved.
 
-    python -m social.jobs generate          # new drafts (one per source in SOCIAL_RUN_MIX) + pending revisions
-    python -m social.jobs generate --only blog --ref https://overlapiq.in/blog/xyz
-    python -m social.jobs revisions         # only process posts marked 'revise' / 'rerender' in the dashboard
-    python -m social.jobs publish           # publish approved posts whose scheduled time has passed
+Drafts are written by a scheduled Claude task, which inserts rows into ig_posts with status 'render'.
+
+    python -m social.jobs work       # render pending drafts + publish posts that are due (hourly)
+    python -m social.jobs render     # only render
+    python -m social.jobs publish    # only publish
+    python -m social.jobs pending    # exit 0 if anything needs rendering (lets the workflow skip installing Chromium)
 """
 import argparse
-import json
 import sys
 import tempfile
 import traceback
 from datetime import datetime, timezone
 
-from . import config as C, db, instagram, render, sources, writer
+from . import config as C, db, instagram, posts, render
 
 
 def now_utc():
@@ -23,6 +24,9 @@ def log(*a):
     print(f"[{now_utc():%H:%M:%S}]", *a, flush=True)
 
 
+RENDER_STATUSES = "in.(render,rerender)"
+
+
 def render_and_upload(post_id, version, slides):
     with tempfile.TemporaryDirectory() as tmp:
         paths, overflow = render.render_slides(slides, tmp)
@@ -30,66 +34,26 @@ def render_and_upload(post_id, version, slides):
     return urls, overflow
 
 
-def create_draft(brief):
-    log(f"Writing {brief['source_type']} post: {brief['title'][:80]}")
-    post = writer.write_post(brief)
-    row = db.insert(C.POSTS_TABLE, {
-        "status": "generating", "source_type": brief["source_type"], "source_ref": brief["source_ref"],
-        "source_url": brief.get("url"), "title": brief["title"][:300], "topic_summary": post["topic_summary"],
-        "slides": post["slides"], "caption": post["caption"], "hashtags": post["hashtags"],
-        "alt_text": post["alt_text"], "flags": post["flags"], "version": 1,
-        "brief": {k: v for k, v in brief.items() if k != "material"} | {"material": brief["material"][:20000]},
-        "sources": brief.get("sources") or ([brief["url"]] if brief.get("url") else []),
-    })
-    urls, overflow = render_and_upload(row["id"], 1, post["slides"])
-    db.update(C.POSTS_TABLE, {"id": row["id"]}, {"status": "draft", "image_urls": urls, "overflow": overflow,
-                                                 "updated_at": now_utc()})
-    log(f"  draft {row['id']} ready ({len(urls)} slides, {len(post['flags'])} review flags)")
-    return row["id"]
-
-
-def generate(only=None, ref=None):
-    made, errors = [], []
-    mix = [only] if only else C.RUN_MIX
-    for kind in mix:
-        maker = sources.BRIEF_MAKERS.get(kind.strip())
-        if not maker:
-            continue
-        try:
-            brief = maker(ref) if (kind == "blog" and ref) else maker()
-            if not brief:
-                log(f"No fresh {kind} material, skipping")
-                continue
-            made.append(create_draft(brief))
-        except Exception as e:
-            traceback.print_exc()
-            errors.append(f"{kind}: {e}")
-    return made, errors
-
-
-def process_revisions():
-    """'revise' = rewrite with editor feedback; 'rerender' = slides edited by hand, just re-draw them."""
-    rows = db.select(C.POSTS_TABLE, {"status": "in.(revise,rerender)", "order": "updated_at.asc"}, limit=10)
+def render_pending():
+    rows = db.select(C.POSTS_TABLE, {"status": RENDER_STATUSES, "order": "updated_at.asc"}, limit=10)
     for row in rows:
         try:
-            version = (row.get("version") or 1) + 1
-            patch = {"version": version}
-            slides = row["slides"]
-            if row["status"] == "revise":
-                brief = row["brief"]
-                log(f"Revising {row['id']} with feedback: {row.get('feedback', '')[:80]}")
-                post = writer.write_post(brief, feedback=row.get("feedback"),
-                                         previous={"slides": row["slides"], "caption": row["caption"]})
-                slides = post["slides"]
-                patch |= {k: post[k] for k in ("slides", "caption", "hashtags", "alt_text", "flags", "topic_summary")}
-            urls, overflow = render_and_upload(row["id"], version, slides)
-            patch |= {"image_urls": urls, "overflow": overflow, "status": "draft", "error": None,
-                      "updated_at": now_utc()}
-            db.update(C.POSTS_TABLE, {"id": row["id"]}, patch)
+            # Version bump only when re-drawing something already drawn (keeps old image URLs intact)
+            version = (row.get("version") or 1) + (1 if row.get("image_urls") else 0)
+            insight = (row.get("brief") or {}).get("insight")
+            clean = posts.normalize(row, insight)
+            log(f"Rendering {row['id']} v{version}: {(row.get('title') or '')[:60]}")
+            urls, overflow = render_and_upload(row["id"], version, clean["slides"])
+            db.update(C.POSTS_TABLE, {"id": row["id"]}, {
+                "slides": clean["slides"], "hashtags": clean["hashtags"], "image_urls": urls,
+                "overflow": overflow, "version": version, "status": "draft", "error": None,
+                "updated_at": now_utc()})
         except Exception as e:
             traceback.print_exc()
-            db.update(C.POSTS_TABLE, {"id": row["id"]}, {"status": "draft", "error": f"Revision failed: {e}",
+            db.update(C.POSTS_TABLE, {"id": row["id"]}, {"status": "draft" if row.get("image_urls") else "failed",
+                                                         "error": f"Rendering failed: {e}"[:1000],
                                                          "updated_at": now_utc()})
+    return rows
 
 
 def claim(row, from_status="approved"):
@@ -101,7 +65,7 @@ def claim(row, from_status="approved"):
 def publish_post(row):
     """Publish one row that has already been claimed (status='publishing')."""
     try:
-        caption = writer.full_caption(row)
+        caption = posts.full_caption(row)
         alts = [row.get("alt_text")] + [None] * (len(row["image_urls"]) - 1)
         media_id, permalink = instagram.publish(row["image_urls"], caption, alts)
         return db.update(C.POSTS_TABLE, {"id": row["id"]}, {
@@ -124,7 +88,7 @@ def publish_due():
     for row in rows:
         if not claim(row):
             continue  # another runner got it
-        log(f"Publishing {row['id']}: {row['title'][:60]}")
+        log(f"Publishing {row['id']}: {(row.get('title') or '')[:60]}")
         out = publish_post(row)
         log(f"  -> {out['status']} {out.get('ig_permalink') or out.get('error') or ''}")
     return rows
@@ -132,19 +96,15 @@ def publish_due():
 
 def main(argv=None):
     ap = argparse.ArgumentParser()
-    ap.add_argument("job", choices=["generate", "revisions", "publish"])
-    ap.add_argument("--only", choices=list(sources.BRIEF_MAKERS))
-    ap.add_argument("--ref", help="specific blog URL for --only blog")
+    ap.add_argument("job", choices=["work", "render", "publish", "pending"])
     a = ap.parse_args(argv)
-    if a.job == "generate":
-        process_revisions()
-        made, errors = generate(a.only, a.ref)
-        log(f"Done: {len(made)} new drafts. Errors: {errors or 'none'}")
-        if errors and not made:
-            sys.exit(1)
-    elif a.job == "revisions":
-        process_revisions()
-    else:
+    if a.job == "pending":
+        n = len(db.select(C.POSTS_TABLE, {"status": RENDER_STATUSES, "select": "id"}, limit=1))
+        print("render-needed" if n else "nothing-to-render")
+        sys.exit(0 if n else 1)
+    if a.job in ("work", "render"):
+        render_pending()
+    if a.job in ("work", "publish"):
         publish_due()
 
 
