@@ -1,0 +1,5 @@
+# Generator (GitHub Actions). The dashboard only needs Flask + requests, which the main app already has.
+requests>=2.31
+jinja2>=3.1
+markupsafe>=2.1
+playwright>=1.47

@@ -1,0 +1,135 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:{{b.bg}};--bg2:{{b.bg2}};--ink:{{b.ink}};--muted:{{b.muted}};
+  --accent:{{b.accent}};--accent2:{{b.accent2}};--card:{{b.card}};--card-ink:{{b.card_ink}};
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#000;font-family:Inter,"Helvetica Neue",Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.slide{width:{{W}}px;height:{{H}}px;position:relative;overflow:hidden;color:var(--ink);
+  background:radial-gradient(1200px 900px at 110% -10%,var(--bg2) 0%,var(--bg) 60%);padding:96px 88px 120px;
+  display:flex;flex-direction:column}
+.venn{position:absolute;pointer-events:none;opacity:.22}
+.venn circle{fill:none;stroke-width:6}
+.venn circle:first-child{stroke:{{b.grad_a}}}.venn circle:last-child{stroke:{{b.grad_d}}}
+.top{display:flex;justify-content:space-between;align-items:center;font:600 26px Inter,sans-serif;color:var(--muted);letter-spacing:.02em}
+.brand{display:flex;align-items:center;gap:14px;color:var(--ink)}
+.foot{position:absolute;left:88px;right:88px;bottom:56px;display:flex;justify-content:space-between;
+  font:500 24px Inter,sans-serif;color:var(--muted)}
+.swipe{color:var(--accent)}
+h1,h2,.big{font-family:"Space Grotesk",Inter,sans-serif;letter-spacing:-.02em}
+.kicker{display:inline-block;align-self:flex-start;background:linear-gradient(90deg,{{b.grad_a}},{{b.grad_d}});color:#fff;font:700 26px Inter,sans-serif;
+  text-transform:uppercase;letter-spacing:.08em;padding:12px 22px;border-radius:999px;margin-bottom:44px}
+.cover .body{margin-top:auto;margin-bottom:auto;display:flex;flex-direction:column}
+.cover h1{font-size:96px;line-height:1.02;font-weight:700}
+.cover h1 em{font-style:normal;background:linear-gradient(90deg,{{b.grad_a}},{{b.grad_c}},{{b.grad_d}});-webkit-background-clip:text;color:transparent}
+.cover p{margin-top:40px;font-size:38px;line-height:1.35;color:var(--muted);max-width:860px}
+.mid{margin:auto 0;display:flex;flex-direction:column}
+.num{font:700 200px/0.9 "Space Grotesk",sans-serif;color:transparent;-webkit-text-stroke:3px var(--accent);margin-bottom:36px}
+h2{font-size:68px;line-height:1.08;font-weight:700}
+.text{margin-top:36px;font-size:40px;line-height:1.42;color:#D6E0EE}
+.big{font-size:220px;line-height:.95;font-weight:700;background:linear-gradient(90deg,{{b.grad_a}},{{b.grad_c}},{{b.grad_d}});-webkit-background-clip:text;color:transparent;align-self:flex-start}
+.label{font:700 52px/1.15 "Space Grotesk",sans-serif;margin-top:28px}
+.ctx{margin-top:32px;font-size:36px;line-height:1.4;color:var(--muted)}
+.card{background:var(--card);color:var(--card-ink);border-radius:36px;padding:56px 52px;margin-top:44px}
+.bar{margin-bottom:30px}
+.bar:last-child{margin-bottom:0}
+.bar .row{display:flex;justify-content:space-between;font:600 30px Inter,sans-serif;margin-bottom:12px}
+.bar .row span:last-child{font-family:"Space Grotesk",sans-serif;font-weight:700}
+.track{height:26px;background:#E6ECF4;border-radius:999px;overflow:hidden}
+.fill{height:100%;background:linear-gradient(90deg,{{b.grad_a}},{{b.grad_c}},{{b.grad_d}});border-radius:999px}
+.unit{margin-top:26px;font-size:24px;color:#5B6B82}
+.note{margin-top:30px;font-size:32px;line-height:1.4;color:var(--muted)}
+.cols{display:flex;gap:28px;margin-top:48px}
+.col{flex:1;border-radius:32px;padding:44px 38px;background:rgba(255,255,255,.06);border:2px solid rgba(255,255,255,.12)}
+.col.r{border-color:var(--accent);background:rgba(99,102,241,.12)}
+.col h3{font:700 36px "Space Grotesk",sans-serif;margin-bottom:28px}
+.col.r h3{color:var(--accent)}
+.col li{list-style:none;font-size:32px;line-height:1.35;margin-bottom:22px;padding-left:34px;position:relative;color:#D6E0EE}
+.col li:before{content:"";position:absolute;left:0;top:14px;width:14px;height:14px;border-radius:50%;background:var(--muted)}
+.col.r li:before{background:var(--accent)}
+.tipbox{border-left:10px solid var(--accent2);padding-left:44px}
+.tipbox .tag{font:700 26px Inter,sans-serif;color:var(--accent2);text-transform:uppercase;letter-spacing:.1em;margin-bottom:26px}
+.cta .mid{align-items:flex-start}
+.url{margin-top:56px;background:linear-gradient(90deg,{{b.grad_a}},{{b.grad_d}});color:#fff;font:700 46px "Space Grotesk",sans-serif;padding:24px 40px;border-radius:999px}
+.follow{margin-top:34px;font-size:32px;color:var(--muted)}
+</style></head>
+<body>
+{% macro venn(x, y, s) -%}
+<svg class="venn" style="left:{{x}}px;top:{{y}}px" width="{{s}}" height="{{s*0.7}}" viewBox="0 0 200 140">
+  <circle cx="70" cy="70" r="62"/><circle cx="130" cy="70" r="62"/></svg>
+{%- endmacro %}
+{% for s in slides %}{% set i = loop.index %}{% set last = loop.last %}
+<section class="slide {{s.type}}" id="s{{i}}">
+  {% if s.type in ('cover','cta') %}{{ venn(560, 760, 760) }}{% else %}{{ venn(760, -60, 420) }}{% endif %}
+  <div class="top">
+    <div class="brand"><svg width="54" height="54" viewBox="3 3 34 34"><defs><linearGradient id="lg1{{i}}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{{b.grad_a}}"/><stop offset="100%" stop-color="{{b.grad_b}}"/></linearGradient><linearGradient id="lg2{{i}}" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{{b.grad_c}}"/><stop offset="100%" stop-color="{{b.grad_d}}"/></linearGradient></defs><circle cx="14" cy="20" r="11" fill="url(#lg1{{i}})" opacity=".85"/><circle cx="26" cy="20" r="11" fill="url(#lg2{{i}})" opacity=".85"/></svg>{{b.name}}</div>
+    <div>{{i}}/{{slides|length}}</div>
+  </div>
+
+  {% if s.type == 'cover' %}
+  <div class="body">
+    {% if s.kicker %}<div class="kicker">{{s.kicker}}</div>{% endif %}
+    <h1>{{ s.title|highlight }}</h1>
+    {% if s.subtitle %}<p>{{s.subtitle}}</p>{% endif %}
+  </div>
+
+  {% elif s.type == 'point' %}
+  <div class="mid">
+    <div class="num">{{ '%02d' % (s.n or i-1) }}</div>
+    <h2>{{s.heading}}</h2>
+    <div class="text">{{s.body}}</div>
+  </div>
+
+  {% elif s.type == 'stat' %}
+  <div class="mid">
+    <div class="big">{{s.value}}</div>
+    <div class="label">{{s.label}}</div>
+    {% if s.context %}<div class="ctx">{{s.context}}</div>{% endif %}
+  </div>
+
+  {% elif s.type == 'bars' %}
+  <div class="mid">
+    <h2 style="font-size:58px">{{s.title}}</h2>
+    <div class="card">
+      {% set mx = (s['items']|map(attribute='value')|max) or 1 %}
+      {% for it in s['items'][:7] %}
+      <div class="bar"><div class="row"><span>{{it.label|truncate(30, True, '…')}}</span><span>{{it.value}}{% if '%' in (s.unit or '') %}%{% endif %}</span></div>
+        <div class="track"><div class="fill" style="width:{{ [4, (100*it.value/mx)|round]|max }}%"></div></div></div>
+      {% endfor %}
+      <div class="unit">{{s.unit}}</div>
+    </div>
+    {% if s.note %}<div class="note">{{s.note}}</div>{% endif %}
+  </div>
+
+  {% elif s.type == 'compare' %}
+  <div class="mid">
+    <h2>{{s.title}}</h2>
+    <div class="cols">
+      <div class="col"><h3>{{s.left_title}}</h3><ul>{% for x in s.left %}<li>{{x}}</li>{% endfor %}</ul></div>
+      <div class="col r"><h3>{{s.right_title}}</h3><ul>{% for x in s.right %}<li>{{x}}</li>{% endfor %}</ul></div>
+    </div>
+  </div>
+
+  {% elif s.type == 'tip' %}
+  <div class="mid tipbox">
+    <div class="tag">Remember</div>
+    <h2>{{s.heading}}</h2>
+    <div class="text">{{s.body}}</div>
+  </div>
+
+  {% elif s.type == 'cta' %}
+  <div class="mid">
+    <h2 style="font-size:84px">{{s.heading}}</h2>
+    <div class="text">{{s.body}}</div>
+    <div class="url">{{b.site}}</div>
+    <div class="follow">Follow {{b.handle}} for more</div>
+  </div>
+  {% endif %}
+
+  <div class="foot"><span>{{b.handle}}</span>{% if not last %}<span class="swipe">Swipe →</span>{% else %}<span>Save this for later</span>{% endif %}</div>
+</section>
+{% endfor %}
+</body></html>

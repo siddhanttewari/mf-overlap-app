@@ -1,0 +1,11 @@
+{% extends "social/_base.html" %}
+{% block title %}Log in{% endblock %}
+{% block body %}
+<form method="post" class="card" style="max-width:380px;margin:60px auto;padding:24px">
+  <h2 style="margin:0 0 4px">Social queue</h2>
+  <p class="muted" style="margin:0 0 8px">Review and approve Instagram drafts.</p>
+  <label for="pw">Password</label>
+  <input id="pw" type="password" name="password" autofocus autocomplete="current-password">
+  <button class="btn primary" style="width:100%;margin-top:16px;justify-content:center">Log in</button>
+</form>
+{% endblock %}

@@ -1,0 +1,158 @@
+{% extends "social/_base.html" %}
+{% block title %}{{ p.topic_summary or p.title }}{% endblock %}
+{% block head %}
+<style>
+.layout{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:20px;align-items:start}
+@media (max-width:900px){.layout{grid-template-columns:1fr}}
+.carousel{max-width:560px;display:flex;overflow-x:auto;scroll-snap-type:x mandatory;border-radius:14px;background:#0B1F3A}
+.carousel img{width:100%;flex:0 0 100%;scroll-snap-align:center;aspect-ratio:4/5;object-fit:cover}
+.thumbs{max-width:560px;display:flex;gap:6px;margin-top:8px;overflow-x:auto}
+.thumbs button{flex:0 0 58px;padding:0;border:2px solid transparent;border-radius:6px;overflow:hidden;cursor:pointer;background:none}
+.thumbs button.on{border-color:var(--accent)}
+.thumbs img{width:58px;aspect-ratio:4/5;object-fit:cover;display:block}
+.panel{padding:16px;margin-bottom:14px}
+.panel h3{margin:0 0 10px;font-size:15px}
+.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.actions .btn{flex:1 1 auto;justify-content:center}
+.flag{border-left:4px solid var(--warn);background:var(--warn-soft);padding:8px 10px;border-radius:6px;margin-bottom:8px;font-size:14px}
+.flag.high{border-color:var(--bad);background:var(--bad-soft)}
+.flag b{text-transform:uppercase;font-size:11px;letter-spacing:.05em}
+.status{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+pre.cap{white-space:pre-wrap;font:13px/1.5 inherit;font-family:inherit;margin:0;max-height:260px;overflow:auto}
+details summary{cursor:pointer;font-weight:600}
+.slideedit{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}
+.slideedit h4{margin:0 0 4px;font-size:13px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
+.counter{font-size:12px;text-align:right}
+.counter.over{color:var(--bad)}
+.err{color:var(--bad)}
+</style>
+{% endblock %}
+{% block body %}
+<p style="margin:0 0 12px"><a href="{{ url_for('social.queue', status=('working' if p.status in ['generating','revise','rerender','publishing'] else p.status)) }}" class="muted">← Back to queue</a></p>
+<div class="status">
+  <span class="pill {{ p.source_type }}">{{ p.source_type }}</span>
+  <span class="pill">{{ p.status }}</span>
+  <span class="muted">v{{ p.version }}</span>
+  {% if p.scheduled_for and p.status == 'approved' %}<span>🗓 {{ ist(p.scheduled_for).strftime('%a %d %b, %I:%M %p') }} IST</span>{% endif %}
+  {% if p.ig_permalink %}<a class="btn" href="{{ p.ig_permalink }}" target="_blank" rel="noopener">View on Instagram ↗</a>{% endif %}
+</div>
+<h2 style="margin:0 0 16px">{{ p.topic_summary or p.title }}</h2>
+{% if p.error %}<div class="flash" style="border-color:var(--bad);background:var(--bad-soft)"><b>Error:</b> {{ p.error }}</div>{% endif %}
+
+<div class="layout">
+  <div>
+    {% if p.image_urls %}
+    <div class="carousel" id="car">{% for u in p.image_urls %}<img src="{{ u }}" alt="Slide {{ loop.index }}">{% endfor %}</div>
+    <div class="thumbs">{% for u in p.image_urls %}<button type="button" data-i="{{ loop.index0 }}" class="{{ 'on' if loop.first }}" aria-label="Slide {{ loop.index }}"><img src="{{ u }}" alt=""></button>{% endfor %}</div>
+    {% else %}<div class="card panel muted">Slides are still rendering — refresh in a minute.</div>{% endif %}
+    {% if p.overflow %}<p class="err">Text may be cramped on slide {{ p.overflow|join(', ') }} — tighten it below.</p>{% endif %}
+
+    {% if p.status in ['draft','failed','approved'] %}
+    <details class="card panel" style="margin-top:14px">
+      <summary>Edit slide text</summary>
+      <form method="post" action="{{ url_for('social.action', pid=p.id) }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        {% for s in p.slides %}{% set si = loop.index0 %}
+        <div class="slideedit"><h4>Slide {{ loop.index }} · {{ s.type }}</h4>
+          {% for k, v in s.items() if k not in edit_skip %}
+          <label for="s{{si}}_{{k}}">{{ k|replace('_',' ') }}{% if v is not string %} <span class="muted">(one per line)</span>{% endif %}</label>
+          <textarea id="s{{si}}_{{k}}" name="s{{si}}_{{k}}" rows="{{ 2 if (v is string and v|length < 80) else 3 }}">{{ v if v is string else v|join('\n') }}</textarea>
+          {% endfor %}
+          {% if s.type == 'bars' %}<p class="muted" style="font-size:13px">Chart values come from OverlapIQ data and can't be edited.</p>{% endif %}
+        </div>
+        {% endfor %}
+        <div class="actions"><button class="btn" name="action" value="rerender">Save &amp; re-render slides</button></div>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if p.flags %}
+    <div class="card panel">
+      <h3>Review flags ({{ p.flags|length }})</h3>
+      {% for f in p.flags %}
+      <div class="flag {{ f.severity }}"><b>{{ f.severity }}{% if f.slide is not none %} · slide {{ f.slide }}{% endif %}</b><br>{{ f.issue }}{% if f.fix %}<br><span class="muted">Fix: {{ f.fix }}</span>{% endif %}</div>
+      {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if p.status in ['draft','failed','approved'] %}
+    <form method="post" action="{{ url_for('social.action', pid=p.id) }}" class="card panel">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <h3>Caption</h3>
+      <textarea name="caption" id="cap" rows="9">{{ p.caption }}</textarea>
+      <div class="counter muted" id="capcount"></div>
+      <label for="tags">Hashtags</label>
+      <textarea name="hashtags" id="tags" rows="2">{{ p.hashtags|join(' ') }}</textarea>
+      <p class="muted" style="font-size:12px;margin:6px 0 0">The disclaimer is added automatically when posting.</p>
+
+      {% if p.status == 'approved' %}
+      <div class="actions">
+        <button class="btn" name="action" value="save">Save caption</button>
+        <button class="btn" name="action" value="unschedule">Unschedule</button>
+        <button class="btn primary" name="action" value="approve_now" onclick="return confirm('Post to Instagram now?')">Post now</button>
+      </div>
+      {% else %}
+      <div class="actions">
+        <button class="btn primary" name="action" value="approve_slot">Approve · {{ next_slot.strftime('%a %d %b, %I:%M %p') }}</button>
+      </div>
+      <label for="when">Or pick a time (IST)</label>
+      <div style="display:flex;gap:8px"><input type="datetime-local" id="when" name="when" value="{{ next_slot.strftime('%Y-%m-%dT%H:%M') }}">
+        <button class="btn" name="action" value="approve_at">Schedule</button></div>
+      <div class="actions">
+        <button class="btn" name="action" value="save">Save</button>
+        <button class="btn" name="action" value="approve_now" onclick="return confirm('Post to Instagram now?')">Post now</button>
+        {% if p.status == 'failed' %}<button class="btn" name="action" value="retry">Retry</button>{% endif %}
+      </div>
+      {% endif %}
+    </form>
+
+    <form method="post" action="{{ url_for('social.action', pid=p.id) }}" class="card panel">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <h3>Send back to the agent</h3>
+      <textarea name="feedback" rows="3" placeholder="e.g. Make the hook about SIP investors, cut slide 4, simpler words">{{ p.feedback or '' }}</textarea>
+      <div class="actions">
+        <button class="btn" name="action" value="revise">Rewrite with feedback</button>
+        <button class="btn danger" name="action" value="reject" onclick="return confirm('Reject this draft?')">Reject</button>
+      </div>
+    </form>
+    {% endif %}
+
+    <details class="card panel">
+      <summary>Final caption as it will post</summary>
+      <pre class="cap" style="margin-top:10px">{{ full_caption }}</pre>
+    </details>
+
+    <div class="card panel">
+      <h3>Source</h3>
+      {% if p.source_url %}<p style="margin:0 0 6px;word-break:break-all"><a href="{{ p.source_url }}" target="_blank" rel="noopener">{{ p.source_url }}</a></p>{% endif %}
+      {% for s in (p.sources or []) if s != p.source_url %}<p style="margin:0 0 6px;word-break:break-all;font-size:13px"><a href="{{ s }}" target="_blank" rel="noopener">{{ s }}</a></p>{% endfor %}
+      <p class="muted" style="margin:0;font-size:13px">{{ p.source_ref }}</p>
+    </div>
+  </div>
+</div>
+<script>
+(() => {
+  const car = document.getElementById('car');
+  if (car) {
+    const btns = [...document.querySelectorAll('.thumbs button')];
+    btns.forEach(b => b.addEventListener('click', () => car.scrollTo({left: car.clientWidth * +b.dataset.i, behavior: 'smooth'})));
+    car.addEventListener('scroll', () => {
+      const i = Math.round(car.scrollLeft / car.clientWidth);
+      btns.forEach((b, k) => b.classList.toggle('on', k === i));
+    });
+  }
+  const cap = document.getElementById('cap'), tags = document.getElementById('tags'), out = document.getElementById('capcount');
+  const DISC = {{ 160 }};
+  function count() {
+    if (!cap) return;
+    const n = cap.value.length + (tags ? tags.value.length : 0) + DISC;
+    const t = tags ? tags.value.split(/\s+/).filter(x => x.startsWith('#')).length : 0;
+    out.textContent = `${n} / 2,200 characters · ${t} / 30 hashtags`;
+    out.classList.toggle('over', n > 2200 || t > 30);
+  }
+  cap && cap.addEventListener('input', count); tags && tags.addEventListener('input', count); count();
+})();
+</script>
+{% endblock %}

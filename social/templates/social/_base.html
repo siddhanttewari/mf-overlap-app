@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>{% block title %}Social queue{% endblock %} · {{ brand.name }}</title>
+<style>
+:root{--bg:#F4F6FA;--card:#fff;--ink:#0B1F3A;--muted:#5B6B82;--line:#E2E8F0;--accent:#0F9F8F;--accent-soft:#E6F7F5;
+  --warn:#B45309;--warn-soft:#FEF3C7;--bad:#B91C1C;--bad-soft:#FEE2E2;--good:#047857}
+@media (prefers-color-scheme:dark){:root{--bg:#0B1220;--card:#121B2E;--ink:#E8EEF7;--muted:#93A4BD;--line:#22304A;
+  --accent:#2DD4BF;--accent-soft:#0F2E2C;--warn:#FBBF24;--warn-soft:#3A2A0A;--bad:#F87171;--bad-soft:#3B1414;--good:#34D399}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:inherit}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line)}
+.bar{max-width:1100px;margin:0 auto;padding:12px 16px;display:flex;align-items:center;gap:12px}
+.logo{font-weight:700;text-decoration:none;display:flex;align-items:center;gap:8px}
+.tabs{max-width:1100px;margin:0 auto;padding:0 12px;display:flex;gap:4px;overflow-x:auto}
+.tabs a{white-space:nowrap;text-decoration:none;padding:10px 12px;color:var(--muted);border-bottom:2px solid transparent;font-weight:500}
+.tabs a.on{color:var(--ink);border-color:var(--accent)}
+.count{display:inline-block;min-width:20px;padding:0 6px;margin-left:4px;border-radius:999px;background:var(--line);font-size:12px;text-align:center}
+main{max-width:1100px;margin:0 auto;padding:16px}
+.flash{background:var(--accent-soft);border:1px solid var(--accent);padding:10px 14px;border-radius:10px;margin-bottom:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px}
+.btn{appearance:none;border:1px solid var(--line);background:var(--card);color:var(--ink);padding:10px 14px;border-radius:10px;
+  font:600 14px inherit;font-family:inherit;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px;min-height:42px}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+@media (prefers-color-scheme:dark){.btn.primary{color:#04201D}}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--line);color:var(--muted);text-transform:capitalize}
+.pill.blog{background:#E0E7FF;color:#3730A3}.pill.data{background:var(--accent-soft);color:var(--accent)}.pill.trending{background:var(--warn-soft);color:var(--warn)}
+@media (prefers-color-scheme:dark){.pill.blog{background:#1E2550;color:#A5B4FC}}
+.muted{color:var(--muted)}
+textarea,input[type=text],input[type=password],input[type=datetime-local],select{width:100%;font:inherit;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+textarea{resize:vertical}
+label{font-weight:600;font-size:13px;display:block;margin:12px 0 6px}
+.spacer{flex:1}
+</style>
+{% block head %}{% endblock %}
+</head><body>
+<header>
+  <div class="bar">
+    <a class="logo" href="{{ url_for('social.queue') }}"><svg width="30" height="21" viewBox="0 0 200 140" fill="none" stroke-width="14"><circle cx="70" cy="70" r="56" stroke="currentColor"/><circle cx="130" cy="70" r="56" stroke="#2DD4BF"/></svg>{{ brand.name }} · Instagram</a>
+    <span class="spacer"></span>
+    {% if session.get('social_admin') %}
+    <form method="post" action="{{ url_for('social.logout') }}"><input type="hidden" name="csrf" value="{{ csrf_token() }}"><button class="btn" type="submit">Log out</button></form>
+    {% endif %}
+  </div>
+  {% block tabs %}{% endblock %}
+</header>
+<main>
+  {% for m in get_flashed_messages() %}<div class="flash">{{ m }}</div>{% endfor %}
+  {% block body %}{% endblock %}
+</main>
+</body></html>

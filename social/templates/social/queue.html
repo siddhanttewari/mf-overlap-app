@@ -1,0 +1,63 @@
+{% extends "social/_base.html" %}
+{% block tabs %}
+<nav class="tabs">
+  {% for key, label in tabs %}
+  <a href="{{ url_for('social.queue', status=key) }}" class="{{ 'on' if key == status }}">{{ label }}<span class="count">{{ counts[key] }}</span></a>
+  {% endfor %}
+</nav>
+{% endblock %}
+{% block head %}
+<style>
+.top{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.post{text-decoration:none;overflow:hidden;display:flex;flex-direction:column}
+.post img{width:100%;aspect-ratio:4/5;object-fit:cover;display:block;background:#0B1F3A}
+.post .meta{padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.post h3{margin:0;font-size:15px;line-height:1.35}
+.row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:13px}
+.flagcount{color:var(--warn);font-weight:600}
+.flagcount.high{color:var(--bad)}
+.err{color:var(--bad);font-size:13px}
+.empty{padding:40px;text-align:center}
+</style>
+{% endblock %}
+{% block body %}
+<div class="top">
+  <h2 style="margin:0">{{ dict(tabs)[status] }}</h2>
+  <span class="spacer"></span>
+  <form method="post" action="{{ url_for('social.generate_now') }}" style="display:flex;gap:8px">
+    <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+    <select name="only" aria-label="Source" style="width:auto">
+      <option value="">All sources</option><option value="blog">From blog</option>
+      <option value="data">From fund data</option><option value="trending">Trending topic</option>
+    </select>
+    <button class="btn primary" {{ 'disabled title="Set GH_DISPATCH_TOKEN to enable"'|safe if not can_dispatch }}>Generate drafts</button>
+  </form>
+</div>
+
+{% if not posts %}
+<div class="card empty muted">
+  {% if status == 'draft' %}Nothing to review. New drafts arrive on the agent's schedule, or hit “Generate drafts”.{% else %}Nothing here yet.{% endif %}
+</div>
+{% else %}
+<div class="grid">
+  {% for p in posts %}
+  {% set high = p.flags|selectattr('severity','equalto','high')|list %}
+  <a class="card post" href="{{ url_for('social.detail', pid=p.id) }}">
+    {% if p.image_urls %}<img src="{{ p.image_urls[0] }}" alt="" loading="lazy">{% else %}<div style="aspect-ratio:4/5;display:grid;place-items:center" class="muted">Rendering…</div>{% endif %}
+    <div class="meta">
+      <div class="row"><span class="pill {{ p.source_type }}">{{ p.source_type }}</span>
+        {% if p.image_urls %}<span class="muted">{{ p.image_urls|length }} slides</span>{% endif %}
+        {% if p.flags %}<span class="flagcount {{ 'high' if high }}">⚑ {{ p.flags|length }} flag{{ 's' if p.flags|length > 1 }}</span>{% endif %}
+      </div>
+      <h3>{{ p.topic_summary or p.title }}</h3>
+      {% if p.status == 'approved' and p.scheduled_for %}<div class="row muted">🗓 {{ ist(p.scheduled_for).strftime('%a %d %b, %I:%M %p') }} IST</div>{% endif %}
+      {% if p.status == 'published' and p.published_at %}<div class="row muted">Posted {{ ist(p.published_at).strftime('%d %b, %I:%M %p') }}</div>{% endif %}
+      {% if p.error %}<div class="err">{{ p.error[:140] }}</div>{% endif %}
+      {% if status == 'working' %}<div class="row muted">{{ p.status }}…</div>{% endif %}
+    </div>
+  </a>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

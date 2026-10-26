@@ -107,6 +107,13 @@ _CLEAN_STATS["hidden_no_equity"] = len(_NO_EQUITY)
 app = Flask(__name__, static_folder="static", static_url_path="")
 CORS(app)
 
+# ---------- Instagram agent dashboard (/admin/social) ----------
+try:
+    from social.dashboard import init_social
+    init_social(app)
+except Exception as _e:  # never let the social dashboard take the site down
+    print(f"[social] dashboard not loaded: {_e}")
+
 # ---------- Supabase config (persistent cache layer) ----------
 _SUPABASE_RAW = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
 if _SUPABASE_RAW.endswith("/rest/v1"):
